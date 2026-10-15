@@ -4,7 +4,7 @@
 > **Al empezar una sesión**: léelo. **Al terminar**: actualiza "Estado", "Pendiente" y "Bitácora de sesiones".
 
 - **Última actualización**: 2026-10-15
-- **Estado global**: specs 000–003 completas; specs 004–006 pendientes.
+- **Estado global**: specs 000–004 completas; specs 005–006 pendientes.
 
 ## 1. Estado por spec
 | Spec | Estado | Notas |
@@ -13,9 +13,15 @@
 | 001 auth | ✅ | Implementada (back + front), verificada y commiteada (`5a8a4f5`) |
 | 002 catalog | ✅ | Backend + frontend, verificados y commiteados (`b3d2aa3`) |
 | 003 discount-engine | ✅ | Motor de dominio puro + cascada + tope del 35 %, verificado (195 tests, `domain/discount` al 100 %) |
-| 004 checkout-backend | ⛔ | Falta: `quote`/`orders`, cupones en BD, migraciones V5/V6 |
+| 004 checkout-backend | ✅ | `quote` público + `orders` autenticado, cupones en BD, stock con `@Version` + reintento, migraciones V5/V6, verificado (290 tests, 99.8 %/99.4 %) |
 | 005 checkout-frontend | ⛔ | |
 | 006 docs-governance | ⛔ | `arquitectura.md`, `ia.md` finales, README, demo |
+
+**Verificación de la spec 004 (2026-10-15)**
+- Backend: `./mvnw verify` → BUILD SUCCESS. **290 tests**; JaCoCo LINE **99.8 %** (971/973), BRANCH **99.4 %** (179/180). Los 3 huecos son heredados de la spec 001 (`SecureRandomRefreshTokenProvider.catch` inalcanzable y una rama de `RefreshService`).
+- Endpoints: `POST /api/checkout/quote` (público), `POST /api/checkout/orders` (201, `USER`/`ADMIN`), `GET /api/orders` (paginado) y `GET /api/orders/{id}` (dueño o `ADMIN`; ajeno ⇒ 404).
+- Sin cambios en el frontend (spec 004 es solo backend).
+- De paso se arregló un test flaky heredado (`JwtIssuerTest`, corrección 10 de `ia.md`).
 
 **Verificación de la spec 003 (2026-10-15)**
 - Backend: `./mvnw verify` → BUILD SUCCESS. **195 tests**; JaCoCo LINE **99.6 %** (563/565), BRANCH **99.1 %** (113/114). Paquete `com.ecommerce.checkout.domain.discount` al **100 %** de líneas y ramas (0 de 62 ramas sin cubrir).
@@ -39,10 +45,10 @@
 - CI (`.github/workflows/ci.yml`) **no ejecutado todavía** (no hay remoto).
 
 ## 2. Decisiones cerradas (no re-discutir)
-Ver [docs/decisiones.md](docs/decisiones.md) (DEC-001..022). Resumen: tope del 35 % configurable y alcanzable con `MEGA40` · cupones en BD solo validación · H2 + Flyway · `@Version` para stock · sin WebSocket · backend única fuente de cálculo · HALF_UP por paso · sin `packages/` · CSS propio · auth completo con roles · `quote` público y `orders` autenticado · paquete `com.ecommerce` · refresh opaco rotado con hash y `noRollbackFor` · Signal Forms + access token solo en memoria · CSRF deshabilitado con justificación · precio como string decimal exacto (back) y céntimos enteros (front) · categoría por nombre de enum y etiqueta ES solo en UI · carrito en memoria con signals e instantánea del producto · **config del motor tipada con el enum `Category` y puente de infraestructura (dominio sin Spring)** · **tope como paso negativo `CAP_ADJUSTMENT`; solo `Money` redondea** · **etiquetas del desglose en ES desde el motor (el dato de categoría sigue siendo el enum)**.
+Ver [docs/decisiones.md](docs/decisiones.md) (DEC-001..026). Resumen: tope del 35 % configurable y alcanzable con `MEGA40` · cupones en BD solo validación · H2 + Flyway · `@Version` para stock · sin WebSocket · backend única fuente de cálculo · HALF_UP por paso · sin `packages/` · CSS propio · auth completo con roles · `quote` público y `orders` autenticado · paquete `com.ecommerce` · refresh opaco rotado con hash y `noRollbackFor` · Signal Forms + access token solo en memoria · CSRF deshabilitado con justificación · precio como string decimal exacto (back) y céntimos enteros (front) · categoría por nombre de enum y etiqueta ES solo en UI · carrito en memoria con signals e instantánea del producto · **config del motor tipada con el enum `Category` y puente de infraestructura (dominio sin Spring)** · **tope como paso negativo `CAP_ADJUSTMENT`; solo `Money` redondea** · **etiquetas del desglose en ES desde el motor (el dato de categoría sigue siendo el enum)** · **reintento por stock envolviendo la transacción completa (`CheckoutTransaction` + `CheckoutService` sin `@Transactional`)** · **paginación de dominio con `PageResult<T>` (los puertos no exponen Spring Data)** · **la orden persiste el desglose completo y se lee sin N+1 (`@BatchSize`)** · **cupón normalizado con vigencia inclusiva y `Clock`; conflicto de stock comparte 409**.
 
 ## 3. Trampas conocidas
-- **Test flaky de token manipulado (spec 001)**: cambiar el **último** carácter base64url de la firma no siempre la invalida: 32 bytes = 43 chars y el último solo codifica 2 bits, así que `A`/`Q`/`g`/`w` decodifican a la misma firma. Manipular el **payload** (segundo segmento) y no la firma.
+- **Test flaky de token manipulado (spec 001, arreglado en la 004)**: cambiar el **último** carácter base64url de la firma no siempre la invalida: 32 bytes = 43 chars y el último solo codifica 2 bits, así que `A`/`Q`/`g`/`w` decodifican a la misma firma. Manipular el **payload** (segundo segmento) y no la firma. Ya corregido en `JwtIssuerTest` y `AuthFlowIntegrationTest`.
 - **Signals en templates/tests**: `subtotalAmount` es un `computed`; hay que **invocarlo** (`subtotalAmount()`). Olvidar los paréntesis da "Received has type: function".
 - **`querySelector` con nombres de producto**: `Monitor 27"` contiene `"` y rompe un selector por atributo (`button[aria-label="...27""]`). Buscar el botón recorriendo `querySelectorAll('button')` y comparando `getAttribute('aria-label')`.
 - **`resource` + reintento en tests**: tras `reload()` el loader no corre hasta el siguiente ciclo; hace falta `fixture.detectChanges()` antes de `httpMock.expectOne(...)`.
@@ -61,6 +67,11 @@ Ver [docs/decisiones.md](docs/decisiones.md) (DEC-001..022). Resumen: tope del 3
 - **Porcentaje efectivo ≠ importe del descuento**: el efectivo es `ratioAsPercent(totalDiscount, subtotal)` (p. ej. `5.01 / 100.10 → 5.00 %`, no 5.01). No confundir el importe redondeado con la tasa.
 - **Surefire `-Dtest`** necesita patrones por **nombre de clase** (`-Dtest=MoneyTest,DiscountPipelineTest`), no globs de paquete (`com.ecommerce.checkout.domain.discount.*` → "No tests matching pattern").
 - **JaCoCo excluye `com/ecommerce/**/config/**`**: `DiscountConfig`/`DiscountSettings` (cableado) no necesitan tests.
+- **Los records de dominio validan con `Objects.requireNonNull`** → los nulos lanzan **`NullPointerException`**, no `IllegalArgumentException`. En los tests distinguir `assertThatNullPointerException()` de `assertThatIllegalArgumentException()` (nulos vs vacío/negativo/rango).
+- **Índices del desglose**: con cupón el orden es `CATEGORY`, `VOLUME`, `COUPON` y `CAP_ADJUSTMENT` (4 pasos); el ajuste por tope es el **último** índice, no el 3 fijo.
+- **`@Valid` en el genérico de una lista de un record**: Hibernate Validator avisa que es deprecado (`HV000271`); aplicarlo al **tipo** del contenedor (`List<@Valid ItemRequest> items`).
+- **Un solo `@Transactional` por compra y el reintento fuera**: el reintento por `OptimisticLockingFailureException` debe reejecutar la transacción completa; si el `@Transactional` y el bucle están en el mismo método, la transacción queda rollback-only y el reintento falla. El `saveAndFlush` fuerza el `UPDATE ... WHERE version = ?` dentro de la transacción.
+- **Concurrencia sobre H2**: los tests de concurrencia **no** pueden ser `@Transactional` (necesitan commits reales entre hilos); para no romper las aserciones del seed de otras suites, usar productos propios (ids 901+) insertados con `MERGE INTO products (...) KEY(id)` y borrarlos en `@AfterEach`.
 - No uses `rm` con globs relativos en la shell de Claude (el sandbox lo bloquea); usa rutas absolutas.
 
 ## 4. Pendiente (no vinculado a una spec)
@@ -75,3 +86,4 @@ Ver [docs/decisiones.md](docs/decisiones.md) (DEC-001..022). Resumen: tope del 3
 | 2026-10-15 | Spec 001 completa: backend auth (JWT Nimbus, refresh rotado con detección de reutilización, roles) + frontend (store, interceptor con refresh único, guards, Signal Forms, cabecera); 82 tests backend (99.4 %/97.5 %) y 46 frontend (100 %); docs de cierre y `ia.md` actualizados |
 | 2026-10-15 | Spec 002 completa: catálogo público (`GET /api/products`, precio string, `@Version`) + carrito reactivo (signals, céntimos enteros, tope de stock) y página con estados loading/error/empty; 104 tests backend (99.5 %/98.1 %) y 90 frontend (100 %); DEC-017..019 y `ia.md` actualizados |
 | 2026-10-15 | Spec 003 completa: motor de descuentos acumulativos de **dominio puro** (`checkout/domain/discount`: Strategy + Pipeline + Factory, cascada, tope del 35 % como paso negativo `CAP_ADJUSTMENT`, `Money` único con `HALF_UP`) + puente de config `DiscountSettings`/`DiscountConfig`; 195 tests backend (LINE 99.6 %/BRANCH 99.1 %, paquete de dominio al **100 %**); DEC-020..022, `arquitectura.md` e `ia.md` (prompt 4, %, correcciones 6-7) actualizados |
+| 2026-10-15 | Spec 004 completa: checkout backend — `POST /api/checkout/quote` (público) y `POST /api/checkout/orders` (autenticado) con cálculo compartido, cupones en BD (`V5`/`V6`), stock con `@Version` + `ProductRepository.save` (`saveAndFlush`) y reintento acotado (`CheckoutTransaction` + `CheckoutService`), órdenes persistidas con desglose completo y consulta por rol/propiedad (`GET /api/orders`, `/{id}`); árbol de errores `ProblemDetail` con `code`; **290 tests** (LINE 99.8 %/BRANCH 99.4 %, incluye concurrencia por la última unidad y rollback multi-línea); DEC-023..026, `security.md`, `ia.md` (prompt 5, %, correcciones 8-10) y este `MEMORY.md` actualizados |

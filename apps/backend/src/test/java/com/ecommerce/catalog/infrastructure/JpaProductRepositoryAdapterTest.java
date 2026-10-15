@@ -1,10 +1,13 @@
 package com.ecommerce.catalog.infrastructure;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.ecommerce.catalog.domain.Category;
 import com.ecommerce.catalog.domain.Product;
+import com.ecommerce.catalog.domain.exception.ProductNotFoundException;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
@@ -55,6 +58,27 @@ class JpaProductRepositoryAdapterTest {
 
         assertThat(adapter.findAllById(List.of(1L, 2L)))
                 .containsExactly(new Product(1L, "Auriculares Bluetooth", Category.TECHNOLOGY, new BigDecimal("59.90"), 10));
+    }
+
+    @Test
+    void saveUpdatesTheStockOfTheManagedEntityAndFlushes() {
+        ProductJpaEntity entity = entity(1L, Category.TECHNOLOGY, "59.90", 10);
+        when(jpaRepository.findById(1L)).thenReturn(Optional.of(entity));
+        when(jpaRepository.saveAndFlush(entity)).thenReturn(entity);
+
+        Product saved = adapter.save(new Product(1L, "Auriculares Bluetooth", Category.TECHNOLOGY, new BigDecimal("59.90"), 4));
+
+        assertThat(entity.getStock()).isEqualTo(4);
+        assertThat(saved.stock()).isEqualTo(4);
+        verify(jpaRepository).saveAndFlush(entity);
+    }
+
+    @Test
+    void saveFailsWhenTheProductDoesNotExist() {
+        when(jpaRepository.findById(99L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> adapter.save(new Product(99L, "Ghost", Category.HOME, BigDecimal.ONE, 1)))
+                .isInstanceOf(ProductNotFoundException.class);
     }
 
     private static ProductJpaEntity entity(Long id, Category category, String price, int stock) {

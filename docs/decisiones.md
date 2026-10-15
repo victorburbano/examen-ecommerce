@@ -131,3 +131,26 @@ Formato: `DEC-NNN` · fecha · estado · contexto · decisión · alternativas �
 - **Decisión**: el `label` es una **descripción de una línea calculada** (p. ej. `"Descuento de categoría"`, `"Cupón WELCOME2026"`, `"Ajuste por tope de ahorro"`) y se genera en el motor, porque la app es monolingüe y no hay capa i18n (YAGNI). El `percent` de un paso es **`null`** únicamente en `CAP_ADJUSTMENT`, que no es una tasa. El **dato** de categoría en el wire sigue siendo el nombre del enum (DEC-018): no se traduce ninguna categoría en el backend.
 - **Alternativas**: devolver solo el `type` y construir la etiqueta en el front (más trabajo por cada `type` nuevo y duplica el contrato); embeber el nombre de la categoría en la etiqueta (obligaría a traducir "Tecnología" en el backend).
 - **Consecuencias**: el front pinta el desglose sin mapear tipos; añadir una regla nueva que reutilice un tipo existente no requiere tocar la UI.
+
+## DEC-023 — El reintento por stock envuelve la transacción entera (unidad `CheckoutTransaction`)
+- **Fecha / estado**: 2026-10-15 · aceptada (concreta DEC-004).
+- **Contexto**: ante un conflicto de locking optimista hay que **re-ejecutar** la compra completa (releer stock y recalcular), pero una transacción ya marcada como fallida por el `@Transactional` de Spring no se puede reintentar dentro de sí misma.
+- **Decisión**: la transacción es un bean propio, `CheckoutTransaction.place(...)` con `@Transactional`, que recalcula, descuenta el stock de **todas** las líneas (con `saveAndFlush` para forzar el `UPDATE ... WHERE version = ?` dentro de la transacción) y persiste la orden. `CheckoutService.checkout(...)` (sin `@Transactional`) es quien itera: reintenta hasta **3** veces ante `OptimisticLockingFailureException`; si se agota, lanza `StockConflictException` → 409. `ProductRepository.save(...)` es el nuevo método del puerto que hace el decremento.
+- **Alternativas**: `@Transactional` en el mismo método con reintento interno (no funciona: la transacción queda *rollback-only*); `SELECT ... FOR UPDATE` pesimista (bloqueos largos y riesgo de deadlock).
+- **Consecuencias**: cada intento abre una transacción nueva (todo o nada); un fallo de stock insuficiente (`InsufficientStockException`) **no** reintenta, es 409 directo.
+
+## DEC-024 — Paginación de dominio con `PageResult<T>` (los puertos no exponen Spring Data)
+- **Contexto**: el puerto `OrderRepository` necesita listar órdenes con paginación, pero devolver `org.springframework.data.domain.Page`/`Pageable` filtraría el framework al dominio.
+- **Decisión**: el dominio define `PageResult<T>(content, number, size, totalElements)` con `totalPages()`; el adaptador JPA traduce el `Page` de Spring Data a `PageResult` (y recibe `int page, int size`). La API expone su propio `PageResponse<T>`; los parámetros `page`/`size` se acotan en el caso de uso (`size` ≤ 50, `page` ≥ 0).
+- **Consecuencias**: el dominio queda libre de Spring (lo verifica el test de arquitectura) y la capa web es la única que conoce el formato de página HTTP.
+
+## DEC-025 — La orden persiste el desglose completo y se lee sin N+1
+- **Contexto**: el acceptance pide que la respuesta de `GET /api/orders/{id}` sea idéntica al quote previo, así que la orden debe guardar líneas y pasos de descuento, y el listado no puede disparar una consulta por orden.
+- **Decisión**: se persisten `order_items` (copia histórica de nombre/categoría/precio/importe, sin FK a `products`) y `order_discounts` (tipo, etiqueta, `percent` nullable, importe). Las colecciones se cargan con `@BatchSize(50)` dentro de la transacción de lectura, así que una página de órdenes cuesta 1 consulta de órdenes + 2 en lote, no N+1. El `id` de la orden es un `UUID` generado por el servidor.
+- **Alternativas**: recalcular el desglose al leer (frágil ante cambios de precios/reglas); `@EntityGraph` con paginación (Hibernate no permite `join fetch` de colecciones con `firstResult/maxResults`).
+- **Consecuencias**: la orden es un registro histórico auditable y la respuesta del checkout coincide con la del quote; el esquema tiene 3 tablas nuevas.
+
+## DEC-026 — Cupón: normalización y vigencia inclusiva; conflicto de stock comparte 409
+- **Contexto**: el enunciado pide aceptar el código "en minúsculas con espacios" y probar el último día de vigencia y el siguiente; además hay dos formas de "no poder comprar por stock".
+- **Decisión**: `CouponCode.normalize` pasa el código a mayúsculas y sin espacios (vacío = sin cupón); `Coupon.isUsableOn` es inclusivo en `valid_from` y `valid_to` con un `Clock` inyectado (nunca `LocalDate.now()` en el dominio). El producto duplicado en el carrito o la cantidad ≤ 0 son 400 `INVALID_CART`/`VALIDATION_ERROR`; un cupón inexistente/vencido es 422; el stock insuficiente y el conflicto tras agotar reintentos comparten 409 `INSUFFICIENT_STOCK` (para el cliente el resultado es el mismo).
+- **Consecuencias**: el contrato de errores es estable (`ProblemDetail` + `code`); la vigencia se prueba con fechas límite y un reloj fijo, sin depender del día real.

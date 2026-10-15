@@ -30,3 +30,20 @@ Comprobaciones del prompt `docs/prompts/security-review.md` (hallazgo y estado):
 | `ProblemDetail` sin stack traces | ✅ RFC 9457 con `code` estable; el 500 devuelve "Unexpected error" y no filtra detalles |
 
 Revisión equivalente a `code-auditor` y `coverage-guard` (no disponibles fuera de Claude Code): diff revisado a mano contra SOLID, tipado estricto (sin `any`), cero lógica en controladores y umbrales de cobertura verificados.
+
+## Revisión de la spec 004 (2026-10-15)
+
+Comprobaciones del prompt `docs/prompts/security-review.md` sobre el checkout (hallazgo y estado):
+
+| Comprobación | Resultado |
+|---|---|
+| Dinero recalculado en el servidor | ✅ `quote` y `orders` usan el **mismo** `CheckoutCalculation`; el cliente solo manda `productId` y `quantity` (los precios/totales que envíe se ignoran). Hay test de que un `total` inyectado no afecta a la respuesta |
+| Autorización de `orders` | ✅ `POST /api/checkout/orders` y `GET /api/orders**` exigen `USER`/`ADMIN` (`@PreAuthorize`); `POST /api/checkout/quote` es público (DEC-012, sin efectos secundarios) |
+| Propiedad (anti-IDOR) | ✅ `OrderQueryService` comprueba dueño o `ADMIN`; una orden de otro `USER` responde **404** (nunca 403), para no revelar su existencia. Test dedicado con dos `USER` y un `ADMIN` |
+| Validación de input | ✅ `jakarta.validation` en `CheckoutRequest` (`@NotNull`/`@Positive`); `productId` duplicado o cuerpo sin `items` → 400. El servicio revalida con tipos de dominio (`RequestedItem`) |
+| Integridad del stock | ✅ `@Version` + `decremento` con `saveAndFlush` dentro de una transacción; el `CHECK (stock >= 0)` y la regla de dominio impiden stock negativo; reintento acotado y 409 al agotarse |
+| Sin datos sensibles en errores/logs | ✅ `ProblemDetail` con `code` estable; los `WARN` de reintento registran solo el número de intento, nunca el token ni el carrito |
+| Cupones | ✅ Existen y vigencia (inclusiva) verificadas con `Clock` inyectado; inexistente/vencido → 422 con código distinto, sin filtrar datos de otros cupones |
+| Secretos / CORS | ✅ Sin cambios: sin secretos en el repo; CORS sigue acotado a `app.security.allowed-origin` |
+
+Revisión equivalente a `code-auditor` y `coverage-guard` (no disponibles fuera de Claude Code): diff revisado a mano contra SOLID (Strategy/Pipeline/Factory ya de la spec 003, Port/Adapter en el checkout, cero lógica en controllers), tipado estricto (sin `any` en Java, records para DTOs), dinero siempre `BigDecimal`/strings y umbrales de cobertura verificados (`./mvnw verify` en verde, LINE 99.8 % / BRANCH 99.4 %).

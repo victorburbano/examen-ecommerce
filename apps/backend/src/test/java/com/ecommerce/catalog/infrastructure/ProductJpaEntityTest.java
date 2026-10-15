@@ -1,6 +1,7 @@
 package com.ecommerce.catalog.infrastructure;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 
 import jakarta.persistence.Version;
 import java.lang.reflect.Field;
@@ -18,5 +19,14 @@ class ProductJpaEntityTest {
         Field version = ProductJpaEntity.class.getDeclaredField("version");
 
         assertThat(version.getAnnotation(Version.class)).isNotNull();
+    }
+
+    @Test
+    void updateStockRejectsANegativeValue() {
+        ProductJpaEntity entity = new ProductJpaEntity();
+
+        assertThatIllegalArgumentException()
+                .isThrownBy(() -> entity.updateStock(-1))
+                .withMessage("stock must not be negative");
     }
 }

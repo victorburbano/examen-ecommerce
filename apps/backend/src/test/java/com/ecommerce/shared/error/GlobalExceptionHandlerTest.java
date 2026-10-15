@@ -8,6 +8,13 @@ import com.ecommerce.auth.domain.exception.InvalidRefreshTokenException;
 import com.ecommerce.auth.domain.exception.UserNotFoundException;
 import com.ecommerce.catalog.domain.exception.InsufficientStockException;
 import com.ecommerce.catalog.domain.exception.ProductNotFoundException;
+import com.ecommerce.checkout.domain.discount.exception.EmptyCartException;
+import com.ecommerce.checkout.domain.discount.exception.InvalidCartException;
+import com.ecommerce.checkout.domain.discount.exception.InvalidCouponException;
+import com.ecommerce.checkout.domain.exception.CouponExpiredException;
+import com.ecommerce.checkout.domain.exception.CouponNotFoundException;
+import com.ecommerce.checkout.domain.exception.OrderNotFoundException;
+import com.ecommerce.checkout.domain.exception.StockConflictException;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.core.MethodParameter;
@@ -54,6 +61,37 @@ class GlobalExceptionHandlerTest {
                 .containsEntry("productId", 8L)
                 .containsEntry("requested", 2)
                 .containsEntry("available", 0);
+    }
+
+    @Test
+    void mapsCheckoutExceptionsToStableCodes() {
+        ProblemDetail emptyCart = handler.handleEmptyCart(new EmptyCartException());
+        assertThat(emptyCart.getStatus()).isEqualTo(HttpStatus.BAD_REQUEST.value());
+        assertThat(code(emptyCart)).isEqualTo("EMPTY_CART");
+
+        ProblemDetail invalidCart = handler.handleInvalidCart(new InvalidCartException("duplicate"));
+        assertThat(invalidCart.getStatus()).isEqualTo(HttpStatus.BAD_REQUEST.value());
+        assertThat(code(invalidCart)).isEqualTo("INVALID_CART");
+
+        ProblemDetail invalidCoupon = handler.handleInvalidCoupon(new InvalidCouponException("bad"));
+        assertThat(invalidCoupon.getStatus()).isEqualTo(HttpStatus.BAD_REQUEST.value());
+        assertThat(code(invalidCoupon)).isEqualTo("INVALID_CART");
+
+        ProblemDetail couponNotFound = handler.handleCouponNotFound(new CouponNotFoundException("NOPE"));
+        assertThat(couponNotFound.getStatus()).isEqualTo(HttpStatus.UNPROCESSABLE_ENTITY.value());
+        assertThat(code(couponNotFound)).isEqualTo("COUPON_NOT_FOUND");
+
+        ProblemDetail couponExpired = handler.handleCouponExpired(new CouponExpiredException("OLD"));
+        assertThat(couponExpired.getStatus()).isEqualTo(HttpStatus.UNPROCESSABLE_ENTITY.value());
+        assertThat(code(couponExpired)).isEqualTo("COUPON_EXPIRED");
+
+        ProblemDetail orderNotFound = handler.handleOrderNotFound(new OrderNotFoundException(java.util.UUID.randomUUID()));
+        assertThat(orderNotFound.getStatus()).isEqualTo(HttpStatus.NOT_FOUND.value());
+        assertThat(code(orderNotFound)).isEqualTo("ORDER_NOT_FOUND");
+
+        ProblemDetail stockConflict = handler.handleStockConflict(new StockConflictException());
+        assertThat(stockConflict.getStatus()).isEqualTo(HttpStatus.CONFLICT.value());
+        assertThat(code(stockConflict)).isEqualTo("INSUFFICIENT_STOCK");
     }
 
     @Test

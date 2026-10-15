@@ -13,4 +13,11 @@ public interface ProductRepository {
     Optional<Product> findById(Long id);
 
     List<Product> findAllById(Collection<Long> ids);
+
+    /**
+     * Persiste el producto (el checkout lo usa para decrementar stock). El adaptador fuerza el
+     * {@code flush} para que el locking optimista ({@code @Version}) detecte el conflicto dentro
+     * de la transacción en curso.
+     */
+    Product save(Product product);
 }

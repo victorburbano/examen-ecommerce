@@ -34,6 +34,7 @@ No disponibles fuera de Claude Code: en la spec 001 se hizo la revisión equival
 | 2 | 2026-10-15 | 001 | Implementar auth de punta a punta (backend + frontend) | Plan corto aprobado; skills `implement-feature` + `auth-jwt` | 82 tests backend (LINE 99.4 %, BRANCH 97.5 %) y 46 tests frontend (100 %); `mvnw verify`, lint y build verdes | El humano aprobó el plan corto; los tests de integración destaparon dos fallos (correcciones 1 y 2) |
 | 3 | 2026-10-15 | 002 | Catálogo público + carrito reactivo (HU 1) | Plan corto aprobado; el humano pidió **recomendación con razones** sobre 3 dudas de diseño (formato del precio, categoría en el wire, dinero en el front) antes de codificar | 104 tests backend (LINE 99.5 %, BRANCH 98.1 %) y 90 frontend (100 %); `mvnw verify`, lint y build verdes | Se aprobaron las 3 recomendaciones (DEC-017..019); la suite destapó un test flaky heredado y dos fallos en las specs nuevas (correcciones 4 y 5) |
 | 4 | 2026-10-15 | 003 | Motor de descuentos acumulativos con tope del 35 % (HU 2 y 4) | Plan corto aprobado; el humano pidió **recomendación con razones** sobre el conflicto entre `plan.md` (`category-name: Tecnología`) y DEC-018, y aprobó `app.discounts.category: TECHNOLOGY` + el puente de infraestructura | 195 tests backend (LINE 99.6 %, BRANCH 99.1 %; paquete `domain/discount` al **100 %** de líneas y ramas); `mvnw verify` verde | Se aprobó DEC-020; la tabla parametrizada destapó un error de cálculo a mano y un test mal planteado (correcciones 6 y 7) |
+| 5 | 2026-10-15 | 004 | Checkout: `quote` público, `orders` autenticado, cupones en BD, stock con `@Version` y reintento (HU 3) | Plan corto aprobado con 3 recomendaciones de diseño (unidad `@Transactional` + reintento fuera de ella, `PageResult` de dominio, desglose completo con carga en lote) | 290 tests backend (LINE **99.8 %**, BRANCH **99.4 %**); `mvnw verify` verde | Se aprobaron las 3 recomendaciones (DEC-023..025); la propia suite destapó dos fallos en tests nuevos (correcciones 8 y 9) y se remató el flaky heredado (corrección 10) |
 
 ### Porcentaje de código asistido
 Método reproducible (`ia-log`): todos los commits llevan el trailer `Co-Authored-By`, así que se mide el diff del commit de cada spec con `git show --shortstat <commit>` y `git show --numstat <commit>`.
@@ -46,6 +47,9 @@ Spec 002 — líneas de **código** del diff: producción **1045** (Java main 34
 
 Spec 003 — líneas de **código** del diff: producción **543** (Java main: dominio puro 494 + infra de config 49) · tests **870** (Java) · config **13** (`application.yml` principal y de test); 71 líneas de docs/specs (incluye este `ia.md` y `MEMORY.md`). 41 archivos.
 **Código asistido por IA: 100 % de las líneas de código del diff**. El humano pidió una recomendación con razones sobre el conflicto entre `plan.md` y DEC-018 (categoría en config) y aprobó `app.discounts.category: TECHNOLOGY` + el puente de infraestructura (DEC-020) antes de codificar; los valores esperados del motor se calcularon **a mano** y el humano revisó el invariante "suma de pasos = descuento total".
+
+Spec 004 — líneas de **código** del diff: producción **1569** (Java main 1512 + migraciones SQL `V5`/`V6` 57) · tests **2105** (Java) · docs/specs **89** (incluye `decisiones.md`, `security.md`, `ia.md` y `MEMORY.md`). 77 archivos.
+**Código asistido por IA: 100 % de las líneas de código del diff**. El humano fijó los criterios de aceptación del `spec.md` (endpoints, códigos de error, seed de cupones, criterios de concurrencia/rollback) y aprobó tres recomendaciones de diseño (DEC-023 unidad transaccional + reintento, DEC-024 `PageResult` de dominio, DEC-025 desglose completo sin N+1) antes de codificar; los importes esperados de las cotizaciones (con y sin tope) se calcularon **a mano** y se verificaron contra el motor real en los tests de integración.
 
 ### Correcciones a sugerencias de la IA (mínimo 2, reales)
 #### 1. El refresh revocaba la familia pero el rollback del 401 deshacía la revocación
@@ -89,3 +93,21 @@ Spec 003 — líneas de **código** del diff: producción **543** (Java main: do
 - **Problema técnico**: `Money` tiene un constructor privado **vacío** (idiom de clase de utilidades), así que `newInstance()` no lanza nada y el test falla con "Expecting code to raise a throwable". El test asumía un comportamiento que el código no tenía.
 - **Corrección aplicada**: eliminar el test (no hay nada que aseverar en un constructor privado vacío) y quitar el `assertThatThrownBy` que quedaba sin uso.
 - **Evidencia**: `apps/backend/src/test/java/com/ecommerce/checkout/domain/discount/MoneyTest.java`; `./mvnw verify` en verde (195 tests).
+
+#### 8. La validación de los records lanza `NullPointerException`, no `IllegalArgumentException`
+- **Sugerencia original** (spec 004): en los tests de dominio de `Coupon`, `Order`, `OrderItem`, `OrderDiscount` y `PageResult` se asertó `assertThatIllegalArgumentException()` para los campos `null`.
+- **Problema técnico**: los constructores compactos usan `Objects.requireNonNull(...)`, que lanza **`NullPointerException`**, así que 5 tests fallaban con "...but was: NullPointerException". La expectativa era incorrecta, no el código.
+- **Corrección aplicada**: distinguir `assertThatNullPointerException()` (nulos) de `assertThatIllegalArgumentException()` (vacío/negativo/rango).
+- **Evidencia**: `CouponTest`, `OrderTest`, `OrderItemTest`, `OrderDiscountTest`, `PageResultTest`; `./mvnw verify` en verde.
+
+#### 9. Índice del paso de tope mal contado en el test de integración
+- **Sugerencia original** (spec 004): en el caso `MEGA40`, asertar `$.discounts[2].type == CAP_ADJUSTMENT`.
+- **Problema técnico**: el desglose lleva **cuatro** pasos (categoría, volumen, cupón y tope), así que el ajuste por tope es el índice **3**; el 2 es `COUPON`. El test falló con `expected:<CAP_ADJUSTMENT> but was:<COUPON>` aunque el tope sí se aplicaba (`effectiveDiscountPercent = 35.00`).
+- **Corrección aplicada**: asertar el índice 3 (y además que `discounts[3].amount = -34.12`).
+- **Evidencia**: `CheckoutIntegrationTest.quotesMega40WithTheCapApplied`; `./mvnw verify` en verde.
+
+#### 10. El test flaky del token manipulado seguía vivo en la suite de unidad (`JwtIssuerTest`)
+- **Contexto**: la corrección 4 arregló `AuthFlowIntegrationTest`, pero el mismo patrón frágil (`token.substring(0, len-1) + (endsWith('A') ? 'B' : 'A')`) seguía en `JwtIssuerTest`, que volvió a fallar de forma intermitente al correr `./mvnw verify` de la spec 004.
+- **Problema técnico**: idéntico al de la corrección 4: cambiar el último carácter base64url de la firma no siempre la invalida (32 bytes → 43 chars, el último con 2 bits útiles), así que el token "manipulado" a veces seguía siendo válido.
+- **Corrección aplicada**: manipular el **payload** (primer carácter del segundo segmento) también en `JwtIssuerTest`.
+- **Evidencia**: `apps/backend/src/test/java/com/ecommerce/auth/infrastructure/JwtIssuerTest.java`; `./mvnw verify` en verde y estable.

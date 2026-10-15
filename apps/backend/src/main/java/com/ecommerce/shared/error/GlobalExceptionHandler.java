@@ -6,6 +6,13 @@ import com.ecommerce.auth.domain.exception.InvalidRefreshTokenException;
 import com.ecommerce.auth.domain.exception.UserNotFoundException;
 import com.ecommerce.catalog.domain.exception.InsufficientStockException;
 import com.ecommerce.catalog.domain.exception.ProductNotFoundException;
+import com.ecommerce.checkout.domain.discount.exception.EmptyCartException;
+import com.ecommerce.checkout.domain.discount.exception.InvalidCartException;
+import com.ecommerce.checkout.domain.discount.exception.InvalidCouponException;
+import com.ecommerce.checkout.domain.exception.CouponExpiredException;
+import com.ecommerce.checkout.domain.exception.CouponNotFoundException;
+import com.ecommerce.checkout.domain.exception.OrderNotFoundException;
+import com.ecommerce.checkout.domain.exception.StockConflictException;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -62,6 +69,41 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         body.setProperty("requested", ex.requested());
         body.setProperty("available", ex.available());
         return body;
+    }
+
+    @ExceptionHandler(EmptyCartException.class)
+    ProblemDetail handleEmptyCart(EmptyCartException ex) {
+        return problem(HttpStatus.BAD_REQUEST, "EMPTY_CART", "The cart must have at least one item");
+    }
+
+    @ExceptionHandler(InvalidCartException.class)
+    ProblemDetail handleInvalidCart(InvalidCartException ex) {
+        return problem(HttpStatus.BAD_REQUEST, "INVALID_CART", "The cart is not valid");
+    }
+
+    @ExceptionHandler(InvalidCouponException.class)
+    ProblemDetail handleInvalidCoupon(InvalidCouponException ex) {
+        return problem(HttpStatus.BAD_REQUEST, "INVALID_CART", "The coupon is not valid");
+    }
+
+    @ExceptionHandler(CouponNotFoundException.class)
+    ProblemDetail handleCouponNotFound(CouponNotFoundException ex) {
+        return problem(HttpStatus.UNPROCESSABLE_ENTITY, "COUPON_NOT_FOUND", "The coupon does not exist");
+    }
+
+    @ExceptionHandler(CouponExpiredException.class)
+    ProblemDetail handleCouponExpired(CouponExpiredException ex) {
+        return problem(HttpStatus.UNPROCESSABLE_ENTITY, "COUPON_EXPIRED", "The coupon is not valid at the current date");
+    }
+
+    @ExceptionHandler(OrderNotFoundException.class)
+    ProblemDetail handleOrderNotFound(OrderNotFoundException ex) {
+        return problem(HttpStatus.NOT_FOUND, "ORDER_NOT_FOUND", "The requested order does not exist");
+    }
+
+    @ExceptionHandler(StockConflictException.class)
+    ProblemDetail handleStockConflict(StockConflictException ex) {
+        return problem(HttpStatus.CONFLICT, "INSUFFICIENT_STOCK", "Stock could not be reserved, please retry");
     }
 
     /**

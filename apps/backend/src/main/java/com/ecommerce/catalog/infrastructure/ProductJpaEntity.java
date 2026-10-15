@@ -64,4 +64,12 @@ public class ProductJpaEntity {
     public int getStock() {
         return stock;
     }
+
+    /** Actualiza el stock (lo usa el checkout). La regla "no bajar de 0" vive en el dominio. */
+    public void updateStock(int stock) {
+        if (stock < 0) {
+            throw new IllegalArgumentException("stock must not be negative");
+        }
+        this.stock = stock;
+    }
 }

@@ -53,7 +53,13 @@ class JwtIssuerTest {
     @Test
     void aTamperedTokenIsRejected() {
         String token = issuer.issue(new User(1L, "user@example.com", "hash", Role.USER)).value();
-        String tampered = token.substring(0, token.length() - 1) + (token.endsWith("A") ? "B" : "A");
+        // Se manipula el payload, no el último carácter de la firma: la codificación base64url de
+        // una firma de 32 bytes deja bits "sobrantes" en el último carácter, así que cambiarlo a
+        // veces decodifica a la misma firma y el token seguiría siendo válido.
+        String[] parts = token.split("\\.");
+        char[] payload = parts[1].toCharArray();
+        payload[0] = payload[0] == 'A' ? 'B' : 'A';
+        String tampered = parts[0] + "." + new String(payload) + "." + parts[2];
 
         assertThatThrownBy(() -> decoder.decode(tampered)).isInstanceOf(JwtException.class);
     }
