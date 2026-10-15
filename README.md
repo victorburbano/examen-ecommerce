@@ -34,7 +34,18 @@ cd apps/frontend && npm run lint && npm run build
 Ver [.env.example](.env.example). `JWT_SECRET` (≥ 32 bytes) es obligatorio desde la spec 001; nunca se versiona `.env`.
 
 ## Usuarios y cupones de prueba
-Se documentan al implementar las specs 001 y 004 (usuarios `admin@example.com` y `user@example.com`; cupones `WELCOME2026`, `EXPIRED2025`, `MEGA40`).
+Usuarios seed (contraseñas **de prueba**, solo para local; `V2__seed_users.sql`):
+
+| Email | Contraseña | Rol |
+|---|---|---|
+| `admin@example.com` | `Admin123!` | `ADMIN` |
+| `user@example.com` | `User123!` | `USER` |
+
+Cupones (se documentan en la spec 004): `WELCOME2026`, `EXPIRED2025`, `MEGA40`.
+
+### Endpoints de auth (spec 001)
+`POST /api/auth/register` · `POST /api/auth/login` · `POST /api/auth/refresh` · `POST /api/auth/logout` · `GET /api/auth/me`.
+El refresh token viaja en una cookie `HttpOnly` (`Path=/api/auth`); el access token solo vive en memoria en el SPA. El frontend alcanza la API por el proxy de `npm start` (`proxy.conf.json` → `http://localhost:8080`).
 
 ## Cómo se construye (SDD)
 Cada funcionalidad nace de una spec en [specs/](specs/) (`spec.md` → `plan.md` → `tasks.md` → `prompt.md`) y se entrega en **un commit por spec**.

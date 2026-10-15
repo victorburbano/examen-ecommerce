@@ -1,0 +1,48 @@
+<section class="card" aria-labelledby="login-title">
+  <h1 id="login-title">Entrar</h1>
+
+  <form (submit)="onSubmit($event)" novalidate>
+    <div class="field">
+      <label for="login-email">Email</label>
+      <input id="login-email" type="email" autocomplete="email" [formField]="loginForm.email" />
+      @if (loginForm.email().touched() && loginForm.email().invalid()) {
+        <ul class="errors" aria-live="polite">
+          @for (error of loginForm.email().errors(); track error) {
+            <li>{{ error.message }}</li>
+          }
+        </ul>
+      }
+    </div>
+
+    <div class="field">
+      <label for="login-password">Contraseña</label>
+      <input
+        id="login-password"
+        type="password"
+        autocomplete="current-password"
+        [formField]="loginForm.password"
+      />
+      @if (loginForm.password().touched() && loginForm.password().invalid()) {
+        <ul class="errors" aria-live="polite">
+          @for (error of loginForm.password().errors(); track error) {
+            <li>{{ error.message }}</li>
+          }
+        </ul>
+      }
+    </div>
+
+    @if (error(); as message) {
+      <p class="api-error" role="alert">{{ message }}</p>
+    }
+
+    <button type="submit" [disabled]="loginForm().invalid() || busy()">Entrar</button>
+  </form>
+
+  <p class="hint">
+    ¿No tienes cuenta? <a routerLink="/register">Crear una cuenta</a>
+  </p>
+
+  <p class="hint hint--demo">
+    Demo: <code>user&#64;example.com</code> / <code>User123!</code>
+  </p>
+</section>

@@ -1,0 +1,44 @@
+<section class="card" aria-labelledby="register-title">
+  <h1 id="register-title">Crear cuenta</h1>
+
+  <form (submit)="onSubmit($event)" novalidate>
+    <div class="field">
+      <label for="register-email">Email</label>
+      <input id="register-email" type="email" autocomplete="email" [formField]="registerForm.email" />
+      @if (registerForm.email().touched() && registerForm.email().invalid()) {
+        <ul class="errors" aria-live="polite">
+          @for (error of registerForm.email().errors(); track error) {
+            <li>{{ error.message }}</li>
+          }
+        </ul>
+      }
+    </div>
+
+    <div class="field">
+      <label for="register-password">Contraseña</label>
+      <input
+        id="register-password"
+        type="password"
+        autocomplete="new-password"
+        [formField]="registerForm.password"
+      />
+      @if (registerForm.password().touched() && registerForm.password().invalid()) {
+        <ul class="errors" aria-live="polite">
+          @for (error of registerForm.password().errors(); track error) {
+            <li>{{ error.message }}</li>
+          }
+        </ul>
+      }
+    </div>
+
+    @if (error(); as message) {
+      <p class="api-error" role="alert">{{ message }}</p>
+    }
+
+    <button type="submit" [disabled]="registerForm().invalid() || busy()">Crear cuenta</button>
+  </form>
+
+  <p class="hint">
+    ¿Ya tienes cuenta? <a routerLink="/login">Entrar</a>
+  </p>
+</section>

@@ -20,4 +20,15 @@ management:
       exposure:
         include: health,info
 
-# Se añaden en sus specs: app.security.* (001) y app.discounts.* (003).
+# Configuración de seguridad (spec 001). Todos los valores sensibles llegan por entorno;
+# JWT_SECRET no tiene valor por defecto: sin él (o si mide < 32 bytes) la app no arranca.
+app:
+  security:
+    jwt-secret: ${JWT_SECRET:}
+    issuer: ${JWT_ISSUER:examen-ecommerce}
+    access-ttl-minutes: ${JWT_ACCESS_TTL_MINUTES:15}
+    refresh-ttl-days: ${JWT_REFRESH_TTL_DAYS:7}
+    cookie-secure: ${COOKIE_SECURE:false}
+    allowed-origin: ${CORS_ALLOWED_ORIGIN:http://localhost:4200}
+
+# Se añade en su spec: app.discounts.* (003).

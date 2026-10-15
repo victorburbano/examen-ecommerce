@@ -1,0 +1,87 @@
+:host {
+  display: flex;
+  justify-content: center;
+  padding: 2rem 1rem;
+}
+
+.card {
+  width: 100%;
+  max-width: 24rem;
+  padding: 2rem;
+  border: 1px solid #d9dde3;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 10px 30px rgb(15 23 42 / 8%);
+}
+
+h1 {
+  margin: 0 0 1.5rem;
+  font-size: 1.5rem;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-bottom: 1rem;
+}
+
+label {
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+input {
+  padding: 0.6rem 0.7rem;
+  border: 1px solid #c3cad4;
+  border-radius: 8px;
+  font: inherit;
+}
+
+input:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 1px;
+}
+
+.errors {
+  margin: 0;
+  padding-left: 1.1rem;
+  color: #b42318;
+  font-size: 0.85rem;
+}
+
+.api-error {
+  margin: 0 0 1rem;
+  padding: 0.6rem 0.8rem;
+  border-radius: 8px;
+  background: #fef3f2;
+  color: #b42318;
+  font-size: 0.9rem;
+}
+
+button {
+  width: 100%;
+  padding: 0.7rem 1rem;
+  border: 0;
+  border-radius: 8px;
+  background: #2563eb;
+  color: #fff;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+button:disabled {
+  background: #93a2bb;
+  cursor: not-allowed;
+}
+
+.hint {
+  margin: 1rem 0 0;
+  font-size: 0.9rem;
+  text-align: center;
+}
+
+.hint--demo {
+  color: #5b6572;
+}

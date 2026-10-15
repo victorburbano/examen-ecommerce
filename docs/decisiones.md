@@ -69,3 +69,23 @@ Formato: `DEC-NNN` · fecha · estado · contexto · decisión · alternativas �
 ## DEC-011 — SDD con formato propio y un commit por spec
 - **Estado**: aceptada.
 - **Decisión**: `specs/NNN-nombre/{spec,plan,tasks,prompt}.md`; un commit por spec con trailer `Co-Authored-By`. Se descarta GitHub Spec Kit (tercero, más pesado de defender).
+
+## DEC-014 — Refresh opaco rotado en BD, con hash y revocación de familia que sobrevive al 401
+- **Fecha / estado**: 2026-10-15 · aceptada.
+- **Contexto**: un refresh rotado debe detectar la reutilización (robo de token) sin obligar a firmar un segundo JWT.
+- **Decisión**: token opaco aleatorio (32 bytes Base64URL); en BD solo su hash SHA-256 (`refresh_tokens`), con `family_id` y `expires_at`. La rotación es una actualización condicional (`markRotated`); si falla (carrera) o el token está revocado/expirado, se revoca la familia y se responde 401. La revocación debe **persistir** aunque la petición acabe en 401 ⇒ `@Transactional(noRollbackFor = InvalidRefreshTokenException.class)`.
+- **Alternativas**: refresh como JWT de larga vida (no revocable sin lista negra); rotación sin condición (dos peticiones concurrentes podrían pasar ambas).
+- **Consecuencias**: hay una tabla extra y un `Clock` en el dominio; a cambio, la reutilización es detectable y auditable. Sin `noRollbackFor`, el rollback de la transacción deshacía la revocación (bug detectado por el test de reutilización).
+
+## DEC-015 — Signal Forms y access token solo en memoria (frontend)
+- **Fecha / estado**: 2026-10-15 · aceptada.
+- **Contexto**: el SPA necesita validación de formulario y no debe exponer el access token a XSS persistente.
+- **Decisión**: validación con **Signal Forms** (`@angular/forms/signals`: `form`, `FormField`, `required`/`email`/`minLength`); no se usa `ReactiveForms`. El access token vive en un `signal` de `AuthStore` y nunca en `localStorage`/`sessionStorage`; al recargar se recupera con `POST /refresh` (cookie `HttpOnly`) desde un `provideAppInitializer` que no rompe el arranque si falla.
+- **Alternativas**: `ReactiveForms` (más código imperativo); guardar el token en `sessionStorage` (lo expone a XSS).
+- **Consecuencias**: un refresco de página implica una llamada de red al arrancar; el interceptor comparte un **único** refresh entre 401 concurrentes y reintenta una sola vez.
+
+## DEC-016 — CSRF deshabilitado con justificación
+- **Fecha / estado**: 2026-10-15 · aceptada.
+- **Contexto**: Spring Security habilita CSRF por defecto y el front usa cookies.
+- **Decisión**: `csrf.disable()` porque la API es stateless y las peticiones de escritura se autentican con `Authorization: Bearer` (no con cookie); la cookie de refresh está limitada a `Path=/api/auth` y es `SameSite=Strict`, así que no viaja en peticiones cross-site de otras rutas.
+- **Consecuencias**: si en el futuro se autenticaran escrituras con cookie, habría que reactivar CSRF o usar `SameSite=Strict` + token anti-CSRF.

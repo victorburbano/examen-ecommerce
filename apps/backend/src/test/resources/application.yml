@@ -1,0 +1,10 @@
+# Config de tests: mismo esquema que producción pero con un JWT_SECRET fijo de 32+ bytes
+# (en producción el secreto es obligatorio por entorno; ver app/security/SecurityProperties).
+app:
+  security:
+    jwt-secret: test-secret-key-that-is-at-least-32-bytes-long
+    issuer: examen-ecommerce-test
+    access-ttl-minutes: 15
+    refresh-ttl-days: 7
+    cookie-secure: false
+    allowed-origin: http://localhost:4200
