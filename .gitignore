@@ -1,0 +1,21 @@
+# env / secrets
+.env
+.env.*
+!.env.example
+# backend
+apps/backend/target/
+*.class
+# frontend
+apps/frontend/node_modules/
+apps/frontend/dist/
+apps/frontend/.angular/
+apps/frontend/coverage/
+apps/frontend/out-tsc/
+# IDE / OS
+.idea/
+.vscode/
+*.iml
+.DS_Store
+Thumbs.db
+# claude local
+.claude/settings.local.json

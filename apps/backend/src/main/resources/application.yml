@@ -1,0 +1,23 @@
+spring:
+  application:
+    name: checkout-backend
+  datasource:
+    # H2 en memoria: los datos (y el seed de Flyway) se reinician con la app. Ver DEC-003.
+    url: jdbc:h2:mem:shop;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    username: sa
+    password: ""
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+  flyway:
+    enabled: true
+    fail-on-missing-locations: false
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+# Se añaden en sus specs: app.security.* (001) y app.discounts.* (003).
