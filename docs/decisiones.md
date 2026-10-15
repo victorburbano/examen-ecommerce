@@ -89,3 +89,24 @@ Formato: `DEC-NNN` · fecha · estado · contexto · decisión · alternativas �
 - **Contexto**: Spring Security habilita CSRF por defecto y el front usa cookies.
 - **Decisión**: `csrf.disable()` porque la API es stateless y las peticiones de escritura se autentican con `Authorization: Bearer` (no con cookie); la cookie de refresh está limitada a `Path=/api/auth` y es `SameSite=Strict`, así que no viaja en peticiones cross-site de otras rutas.
 - **Consecuencias**: si en el futuro se autenticaran escrituras con cookie, habría que reactivar CSRF o usar `SameSite=Strict` + token anti-CSRF.
+
+## DEC-017 — Precio como string decimal exacto (backend) y céntimos enteros (frontend)
+- **Fecha / estado**: 2026-10-15 · aceptada.
+- **Contexto**: el dinero no puede pasar por `double`. Si el JSON llevara `59.90` como número, cualquier cliente podría degradarlo a coma flotante (`59.899999...`), y el front debe sumar el subtotal local sin arrastrar error de redondeo.
+- **Decisión**: en el backend el precio es `BigDecimal` normalizado a escala 2 (`HALF_UP`) y se serializa **como string** (`@JsonFormat(shape = STRING)` en `ProductResponse`), garantizado con un test que fija el JSON exacto (`"price":"59.90"`). En el front el importe se guarda como **string exacto** y se suma en **céntimos enteros** (`toCents` con parseo estricto de 2 decimales); el `CurrencyPipe` solo pinta.
+- **Alternativas**: precio numérico en el JSON (pierde la escala y abre la puerta al `float`); `decimal.js`/`Big.js` en el front (dependencia innecesaria para sumas de céntimos); calcular el subtotal en el backend (rompe el "tiempo real" de la HU 1).
+- **Consecuencias**: el contrato obliga a parsear strings; el redondeo real sigue siendo del backend (`quote`), el front solo muestra una suma local que el backend recalcula.
+
+## DEC-018 — Categoría por nombre de enum y etiqueta en español solo en la UI
+- **Fecha / estado**: 2026-10-15 · aceptada.
+- **Contexto**: la categoría viaja en el catálogo y se muestra en español ("Tecnología", "Hogar", "Ropa").
+- **Decisión**: en la API la categoría es el **nombre del enum** en inglés (`TECHNOLOGY`/`HOME`/`CLOTHING`, `@Enumerated(STRING)` en la entidad para que el valor persistido no dependa del orden). La traducción a español vive en un mapa de presentación del front (`categoryLabel`), con la categoria desconocida mostrada tal cual.
+- **Alternativas**: etiqueta en español en la API (acopla el contrato al idioma de la UI y complica el filtrado); número ordinal (ilegible y frágil ante reordenaciones); tabla `categories` en BD (desproporcionado para 3 valores fijos).
+- **Consecuencias**: cambiar el idioma de la UI no toca el backend; el enum es el vocabulario estable de dominio.
+
+## DEC-019 — Carrito en memoria con signals y con la instantánea del producto
+- **Fecha / estado**: 2026-10-15 · aceptada.
+- **Contexto**: la HU 1 pide que el subtotal se actualice "en tiempo real", sin backend y sin persistir el carrito (fuera de alcance).
+- **Decisión**: `CartStore` (`providedIn: 'root'`) con `signal` para las líneas y `computed` para subtotal/céntimos, nº de ítems y totales por línea. Cada línea guarda una **instantánea** del producto (nombre y precio) con su cantidad; si el producto desaparece del catálogo, la línea se mantiene con sus totales. El catálogo se carga con `resource` (loading/error/empty + `reload()`).
+- **Alternativas**: `localStorage` (el enunciado no lo pide y añade invalidez de precios); recalcular contra el backend en cada `+`/`-` (mata el "tiempo real"); servicio con `BehaviorSubject` (más código que los signals para lo mismo).
+- **Consecuencias**: el carrito sobrevive a la navegación y al login, no a un recargar; el precio mostrado es el del momento de añadir y el backend revalida al cotizar/comprar.

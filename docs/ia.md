@@ -2,7 +2,7 @@
 
 > **Esqueleto (spec 000).** Se llena con hechos reales al cerrar cada spec (skill `ia-log`). Las secciones marcadas *pendiente* no contienen entradas inventadas a propósito.
 
-Asistentes usados: Claude Code (Anthropic) para el scaffold (spec 000) y OpenCode para la implementación (spec 001). Método: Spec-Driven Development, un commit por spec.
+Asistentes usados: Claude Code (Anthropic) para el scaffold (spec 000) y OpenCode para la implementación (specs 001 y 002). Método: Spec-Driven Development, un commit por spec.
 
 ## 1. Skills / prompts automatizados
 | Skill | Qué automatiza | Dónde |
@@ -32,12 +32,16 @@ No disponibles fuera de Claude Code: en la spec 001 se hizo la revisión equival
 |---|---|---|---|---|---|---|
 | 1 | 2026-10-15 | 000 | Entender el enunciado, proponer arquitectura y specs | Conversación de entrevista (Fase 0) | Decisiones DEC-001..011 | El humano corrigió: auth completo, cupones en BD, cap configurable |
 | 2 | 2026-10-15 | 001 | Implementar auth de punta a punta (backend + frontend) | Plan corto aprobado; skills `implement-feature` + `auth-jwt` | 82 tests backend (LINE 99.4 %, BRANCH 97.5 %) y 46 tests frontend (100 %); `mvnw verify`, lint y build verdes | El humano aprobó el plan corto; los tests de integración destaparon dos fallos (correcciones 1 y 2) |
+| 3 | 2026-10-15 | 002 | Catálogo público + carrito reactivo (HU 1) | Plan corto aprobado; el humano pidió **recomendación con razones** sobre 3 dudas de diseño (formato del precio, categoría en el wire, dinero en el front) antes de codificar | 104 tests backend (LINE 99.5 %, BRANCH 98.1 %) y 90 frontend (100 %); `mvnw verify`, lint y build verdes | Se aprobaron las 3 recomendaciones (DEC-017..019); la suite destapó un test flaky heredado y dos fallos en las specs nuevas (correcciones 4 y 5) |
 
 ### Porcentaje de código asistido
 Método reproducible (`ia-log`): todos los commits llevan el trailer `Co-Authored-By`, así que se mide el diff del commit de cada spec con `git show --shortstat <commit>` y `git show --numstat <commit>`.
 
 Spec 001 — líneas de **código** (cifra estable, independiente de la redacción de estos docs): producción **1941** · tests **2311** · config/assets **368**; 106 archivos en total (incluidos docs y specs).
 **Código asistido por IA: 100 % de las líneas de código del diff** (borrador + tests generados por la IA bajo specs aprobadas). El humano no escribió líneas de implementación en esta spec: aportó las decisiones de arquitectura y criterios (DEC-001 cap configurable, DEC-010 auth completo, DEC-012 `quote` público) y aprobó el plan antes de codificar; la revisión de cierre se hizo contra `docs/security.md` y las convenciones.
+
+Spec 002 — líneas de **código** del diff: producción **1045** (Java main 349 · TS de componentes/servicios 254 · plantillas y CSS 421 · migraciones SQL 21) · tests **932** (Java 356 · specs Jest 576); 47 líneas de docs/specs. 49 archivos.
+**Código asistido por IA: 100 % de las líneas de código del diff**. El humano fijó los criterios de aceptación del `spec.md`, pidió y aprobó tres recomendaciones de diseño (DEC-017..019) y validó el plan corto antes de escribir código; la lógica de negocio del carrito (tope de stock, céntimos enteros) se revisó contra los casos de borde del enunciado.
 
 ### Correcciones a sugerencias de la IA (mínimo 2, reales)
 #### 1. El refresh revocaba la familia pero el rollback del 401 deshacía la revocación
@@ -57,3 +61,15 @@ Spec 001 — líneas de **código** (cifra estable, independiente de la redacci�
 - **Problema técnico**: `@typescript-eslint/no-invalid-void-type` prohíbe `void` como argumento de tipo en una `CallExpression` (`post<void>(...)`), aunque sí lo permite en posición de retorno.
 - **Corrección aplicada**: `post<undefined>(...)` manteniendo la firma pública `Observable<void>`.
 - **Evidencia**: `apps/frontend/src/app/core/auth/auth-api.service.ts`; `npm run lint` en verde.
+
+#### 4. El test de "token manipulado" era flaky: podía no invalidar la firma
+- **Sugerencia original** (spec 001): para probar que un token manipulado se rechaza, cambiar su **último** carácter (`token.substring(0, len-1) + (endsWith('A') ? 'B' : 'A')`).
+- **Problema técnico**: una firma HS256 son 32 bytes = **43 chars base64url**, y el último carácter solo codifica **2 bits útiles** de los 6 que aporta; los caracteres cuya parte significativa coincide (`A`/`Q`/`g`/`w`) decodifican a la **misma** firma, así que el token "manipulado" seguía siendo válido y el test devolvía 200 en lugar de 401 (~6 % de las ejecuciones). Apareció al correr la suite de la spec 002.
+- **Corrección aplicada**: manipular el **payload** (primer carácter del segundo segmento), que siempre cambia el contenido firmado.
+- **Evidencia**: `apps/backend/src/test/java/com/ecommerce/auth/api/AuthFlowIntegrationTest.java` (`tamperPayload`); `./mvnw verify` en verde.
+
+#### 5. El selector CSS del panel se rompía con un nombre que contiene comillas
+- **Sugerencia original** (spec 002): localizar botones con `querySelector('button[aria-label="..."]')` construido a partir del nombre del producto.
+- **Problema técnico**: un nombre seed real como `Monitor 27"` contiene una comilla doble, y el selector resultante (`button[aria-label="Añadir una unidad de Monitor 27""]`) es **inválido** (`SyntaxError` en jsdom). Los datos de prueba realistas rompen la técnica del helper.
+- **Corrección aplicada**: buscar el botón recorriendo `querySelectorAll('button')` y comparando `getAttribute('aria-label')` por igualdad (sin interpolación en el selector).
+- **Evidencia**: `apps/frontend/src/app/features/cart/cart-panel/cart-panel.spec.ts`; `npm run test:coverage` en verde (90 tests).

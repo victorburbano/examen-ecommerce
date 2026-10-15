@@ -1,0 +1,43 @@
+<article class="card">
+  <header class="card__head">
+    <h3 class="card__name">{{ product().name }}</h3>
+    <span class="card__category">{{ category() }}</span>
+  </header>
+
+  <p class="card__price">{{ product().price | currency: 'USD' }}</p>
+
+  <p class="card__stock" [class.card__stock--out]="soldOut()">
+    @if (soldOut()) {
+      Sin stock
+    } @else {
+      Stock: {{ product().stock }}
+    }
+  </p>
+
+  <div class="card__actions">
+    @if (quantity() > 0) {
+      <button
+        type="button"
+        class="btn btn--ghost"
+        [attr.aria-label]="'Quitar una unidad de ' + product().name"
+        (click)="remove.emit(product())"
+      >
+        −
+      </button>
+      <span class="card__qty" aria-live="polite">{{ quantity() }}</span>
+    }
+
+    <button
+      type="button"
+      class="btn btn--primary"
+      [disabled]="soldOut() || atLimit()"
+      (click)="add.emit(product())"
+    >
+      {{ soldOut() ? 'Sin stock' : 'Agregar' }}
+    </button>
+  </div>
+
+  @if (!soldOut() && atLimit()) {
+    <p class="card__hint">Ya tienes todas las unidades disponibles.</p>
+  }
+</article>

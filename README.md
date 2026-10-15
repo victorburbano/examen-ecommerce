@@ -47,6 +47,9 @@ Cupones (se documentan en la spec 004): `WELCOME2026`, `EXPIRED2025`, `MEGA40`.
 `POST /api/auth/register` · `POST /api/auth/login` · `POST /api/auth/refresh` · `POST /api/auth/logout` · `GET /api/auth/me`.
 El refresh token viaja en una cookie `HttpOnly` (`Path=/api/auth`); el access token solo vive en memoria en el SPA. El frontend alcanza la API por el proxy de `npm start` (`proxy.conf.json` → `http://localhost:8080`).
 
+### Endpoints de catálogo (spec 002)
+`GET /api/products` · `GET /api/products/{id}` (públicos, solo lectura). El precio viaja como **string decimal exacto** (`"59.90"`) y la categoría como nombre de enum (`TECHNOLOGY`/`HOME`/`CLOTHING`); el carrito vive solo en memoria en el SPA y suma el subtotal en céntimos enteros. El stock únicamente cambia por checkout (spec 004).
+
 ## Cómo se construye (SDD)
 Cada funcionalidad nace de una spec en [specs/](specs/) (`spec.md` → `plan.md` → `tasks.md` → `prompt.md`) y se entrega en **un commit por spec**.
 

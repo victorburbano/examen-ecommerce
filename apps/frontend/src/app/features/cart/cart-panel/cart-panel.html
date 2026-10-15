@@ -1,0 +1,62 @@
+<aside class="cart" aria-labelledby="cart-title">
+  <header class="cart__head">
+    <h2 id="cart-title">Carrito</h2>
+    <span class="cart__count" aria-live="polite">{{ cart.itemCount() }} art.</span>
+  </header>
+
+  @if (cart.isEmpty()) {
+    <p class="cart__empty">El carrito está vacío.</p>
+  } @else {
+    <ul class="cart__lines">
+      @for (line of cart.lines(); track line.product.id) {
+        <li class="line">
+          <div class="line__info">
+            <span class="line__name">{{ line.product.name }}</span>
+            <span class="line__unit">{{ line.product.price | currency: 'USD' }} / ud.</span>
+          </div>
+
+          <div class="line__controls">
+            <button
+              type="button"
+              class="btn"
+              [attr.aria-label]="'Quitar una unidad de ' + line.product.name"
+              (click)="cart.removeOne(line.product.id)"
+            >
+              −
+            </button>
+            <span class="line__qty">{{ line.quantity }}</span>
+            <button
+              type="button"
+              class="btn"
+              [disabled]="line.quantity >= line.product.stock"
+              [attr.aria-label]="'Añadir una unidad de ' + line.product.name"
+              (click)="cart.add(line.product)"
+            >
+              +
+            </button>
+          </div>
+
+          <div class="line__total">
+            <span class="line__amount">{{ line.lineTotalAmount | currency: 'USD' }}</span>
+            <button
+              type="button"
+              class="link"
+              [attr.aria-label]="'Eliminar ' + line.product.name + ' del carrito'"
+              (click)="cart.remove(line.product.id)"
+            >
+              Eliminar
+            </button>
+          </div>
+        </li>
+      }
+    </ul>
+
+    <footer class="cart__foot">
+      <div class="cart__subtotal">
+        <span>Subtotal</span>
+        <strong aria-live="polite">{{ cart.subtotalAmount() | currency: 'USD' }}</strong>
+      </div>
+      <button type="button" class="link" (click)="cart.clear()">Vaciar carrito</button>
+    </footer>
+  }
+</aside>

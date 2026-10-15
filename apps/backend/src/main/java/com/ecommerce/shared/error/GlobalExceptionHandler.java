@@ -4,6 +4,8 @@ import com.ecommerce.auth.domain.exception.EmailAlreadyTakenException;
 import com.ecommerce.auth.domain.exception.InvalidCredentialsException;
 import com.ecommerce.auth.domain.exception.InvalidRefreshTokenException;
 import com.ecommerce.auth.domain.exception.UserNotFoundException;
+import com.ecommerce.catalog.domain.exception.InsufficientStockException;
+import com.ecommerce.catalog.domain.exception.ProductNotFoundException;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -46,6 +48,20 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     @ExceptionHandler(UserNotFoundException.class)
     ProblemDetail handleUserNotFound(UserNotFoundException ex) {
         return problem(HttpStatus.UNAUTHORIZED, "USER_NOT_FOUND", "The authenticated user no longer exists");
+    }
+
+    @ExceptionHandler(ProductNotFoundException.class)
+    ProblemDetail handleProductNotFound(ProductNotFoundException ex) {
+        return problem(HttpStatus.NOT_FOUND, "PRODUCT_NOT_FOUND", "The requested product does not exist");
+    }
+
+    @ExceptionHandler(InsufficientStockException.class)
+    ProblemDetail handleInsufficientStock(InsufficientStockException ex) {
+        ProblemDetail body = problem(HttpStatus.CONFLICT, "INSUFFICIENT_STOCK", "There is not enough stock");
+        body.setProperty("productId", ex.productId());
+        body.setProperty("requested", ex.requested());
+        body.setProperty("available", ex.available());
+        return body;
     }
 
     /**

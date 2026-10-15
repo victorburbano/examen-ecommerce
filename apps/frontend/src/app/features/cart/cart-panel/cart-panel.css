@@ -1,0 +1,127 @@
+:host {
+  display: block;
+}
+
+.cart {
+  position: sticky;
+  top: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1.25rem;
+  border: 1px solid #e2e6ec;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.cart__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.cart__head h2 {
+  margin: 0;
+  font-size: 1.15rem;
+}
+
+.cart__count {
+  color: #475569;
+  font-size: 0.85rem;
+}
+
+.cart__empty {
+  margin: 0;
+  color: #64748b;
+}
+
+.cart__lines {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.line {
+  display: grid;
+  gap: 0.35rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.line__info {
+  display: flex;
+  flex-direction: column;
+}
+
+.line__name {
+  font-weight: 600;
+}
+
+.line__unit {
+  color: #64748b;
+  font-size: 0.8rem;
+}
+
+.line__controls {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.line__qty {
+  min-width: 1.5rem;
+  text-align: center;
+  font-weight: 700;
+}
+
+.line__total {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.line__amount {
+  font-weight: 700;
+}
+
+.btn {
+  width: 1.9rem;
+  height: 1.9rem;
+  border: 1px solid #c3cad4;
+  border-radius: 8px;
+  background: #fff;
+  font: inherit;
+  cursor: pointer;
+}
+
+.btn:disabled {
+  color: #cbd5e1;
+  cursor: not-allowed;
+}
+
+.link {
+  border: 0;
+  background: none;
+  color: #b42318;
+  font: inherit;
+  font-size: 0.8rem;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.cart__foot {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.cart__subtotal {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  font-size: 1.05rem;
+}

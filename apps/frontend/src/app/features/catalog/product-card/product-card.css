@@ -1,0 +1,102 @@
+:host {
+  display: block;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 1rem;
+  border: 1px solid #e2e6ec;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 1px 3px rgb(15 23 42 / 6%);
+}
+
+.card__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.card__name {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.card__category {
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  background: #eef2ff;
+  color: #3730a3;
+  font-size: 0.75rem;
+  white-space: nowrap;
+}
+
+.card__price {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.card__stock {
+  margin: 0;
+  color: #475569;
+  font-size: 0.85rem;
+}
+
+.card__stock--out {
+  color: #b42318;
+  font-weight: 600;
+}
+
+.card__actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.35rem;
+}
+
+.card__qty {
+  min-width: 1.5rem;
+  text-align: center;
+  font-weight: 700;
+}
+
+.btn {
+  padding: 0.45rem 0.85rem;
+  border: 0;
+  border-radius: 8px;
+  font: inherit;
+  cursor: pointer;
+}
+
+.btn--primary {
+  flex: 1;
+  background: #2563eb;
+  color: #fff;
+  font-weight: 600;
+}
+
+.btn--primary:disabled {
+  background: #cbd5e1;
+  color: #64748b;
+  cursor: not-allowed;
+}
+
+.btn--ghost {
+  border: 1px solid #c3cad4;
+  background: #fff;
+  font-weight: 700;
+}
+
+.btn--ghost:hover {
+  background: #f1f5f9;
+}
+
+.card__hint {
+  margin: 0;
+  color: #5b6572;
+  font-size: 0.8rem;
+}

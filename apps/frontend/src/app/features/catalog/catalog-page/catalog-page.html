@@ -1,0 +1,31 @@
+<section class="page">
+  <div class="page__main">
+    <h1 class="page__title">Catálogo</h1>
+
+    @if (products.isLoading()) {
+      <p class="state" role="status">Cargando catálogo…</p>
+    } @else if (products.error()) {
+      <div class="state state--error" role="alert">
+        <p>No se ha podido cargar el catálogo.</p>
+        <button type="button" class="retry" (click)="products.reload()">Reintentar</button>
+      </div>
+    } @else if (products.value(); as items) {
+      @if (items.length === 0) {
+        <p class="state">No hay productos disponibles.</p>
+      } @else {
+        <div class="grid">
+          @for (product of items; track product.id) {
+            <app-product-card
+              [product]="product"
+              [quantity]="cart.quantityOf(product.id)"
+              (add)="cart.add($event)"
+              (remove)="cart.removeOne($event.id)"
+            />
+          }
+        </div>
+      }
+    }
+  </div>
+
+  <app-cart-panel />
+</section>

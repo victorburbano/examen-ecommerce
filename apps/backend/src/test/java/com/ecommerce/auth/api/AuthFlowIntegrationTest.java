@@ -145,10 +145,23 @@ class AuthFlowIntegrationTest {
                 .andExpect(jsonPath("$.code").value("UNAUTHORIZED"));
 
         String token = login("user@example.com", "User123!");
-        String tampered = token.substring(0, token.length() - 1) + (token.endsWith("A") ? "B" : "A");
+        String tampered = tamperPayload(token);
 
         mockMvc.perform(get("/api/auth/me").header(HttpHeaders.AUTHORIZATION, "Bearer " + tampered))
                 .andExpect(status().isUnauthorized());
+    }
+
+    /**
+     * Manipula el payload (primer carácter del segundo segmento) para garantizar que la firma ya
+     * no coincide. Cambiar el último carácter de la firma no siempre sirve: la codificación
+     * base64url de 32 bytes tiene 2 bits útiles en el último carácter, así que muchos caracteres
+     * decodifican a la misma firma y el token seguiría siendo válido.
+     */
+    private static String tamperPayload(String token) {
+        String[] parts = token.split("\\.");
+        char[] payload = parts[1].toCharArray();
+        payload[0] = payload[0] == 'A' ? 'B' : 'A';
+        return parts[0] + "." + new String(payload) + "." + parts[2];
     }
 
     private String login(String email, String password) throws Exception {

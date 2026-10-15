@@ -6,6 +6,8 @@ import com.ecommerce.auth.domain.exception.EmailAlreadyTakenException;
 import com.ecommerce.auth.domain.exception.InvalidCredentialsException;
 import com.ecommerce.auth.domain.exception.InvalidRefreshTokenException;
 import com.ecommerce.auth.domain.exception.UserNotFoundException;
+import com.ecommerce.catalog.domain.exception.InsufficientStockException;
+import com.ecommerce.catalog.domain.exception.ProductNotFoundException;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.core.MethodParameter;
@@ -37,6 +39,21 @@ class GlobalExceptionHandlerTest {
         assertThat(code(handler.handleUserNotFound(new UserNotFoundException(1L)))).isEqualTo("USER_NOT_FOUND");
         assertThat(handler.handleInvalidCredentials(new InvalidCredentialsException()).getStatus())
                 .isEqualTo(HttpStatus.UNAUTHORIZED.value());
+    }
+
+    @Test
+    void mapsCatalogExceptionsToStableCodes() {
+        ProblemDetail notFound = handler.handleProductNotFound(new ProductNotFoundException(999L));
+        assertThat(notFound.getStatus()).isEqualTo(HttpStatus.NOT_FOUND.value());
+        assertThat(code(notFound)).isEqualTo("PRODUCT_NOT_FOUND");
+
+        ProblemDetail stock = handler.handleInsufficientStock(new InsufficientStockException(8L, 2, 0));
+        assertThat(stock.getStatus()).isEqualTo(HttpStatus.CONFLICT.value());
+        assertThat(code(stock)).isEqualTo("INSUFFICIENT_STOCK");
+        assertThat(stock.getProperties())
+                .containsEntry("productId", 8L)
+                .containsEntry("requested", 2)
+                .containsEntry("available", 0);
     }
 
     @Test
