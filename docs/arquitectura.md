@@ -32,12 +32,17 @@ flowchart LR
 ```
 
 ## 3. Aislamiento de las reglas matemáticas
-El motor vive en `checkout/domain/discount` y **no importa Spring, JPA ni HTTP**. Recibe un `Cart` y un `Optional<AppliedCoupon>` y devuelve un `DiscountBreakdown` inmutable. Controllers y repositorios quedan fuera; se prueba con JUnit puro.
+El motor vive en `checkout/domain/discount` y **no importa Spring, JPA ni HTTP** (verificado por `DiscountDomainArchitectureTest`, que escanea los `import` del paquete). Recibe un `Cart` y un `Optional<AppliedCoupon>` y devuelve un `DiscountBreakdown` inmutable. Controllers y repositorios quedan fuera; se prueba con JUnit puro.
+
+- **Cascada**: cada regla recibe el total corriente y descuenta sobre él (nunca se suman porcentajes). El orden es fijo: categoría → volumen → cupón.
+- **Redondeo**: solo `Money` usa `RoundingMode`; cada paso redondea a escala 2 con `HALF_UP` (DEC-007/DEC-021).
+- **Tope**: `DiscountCapPolicy` es la única clase que conoce el 35 %; si el acumulado lo supera, añade un paso `CAP_ADJUSTMENT` con el exceso en **negativo**, de modo que la suma de pasos cuadra con `totalDiscount`.
+- **Config tipada**: `DiscountProperties` (dominio) se enlaza desde `app.discounts.*` mediante `DiscountSettings` + `DiscountConfig` en infraestructura, así el dominio no depende de Spring (DEC-020).
 
 ## 4. Patrones (≥ 2 implementados en código)
 | Patrón | Dónde | Por qué |
 |---|---|---|
-| **Strategy** | `DiscountRule` (una clase por regla) | Añadir una regla no toca las existentes (OCP) |
+| **Strategy** | `DiscountRule` (`CategoryDiscountRule`, `VolumeDiscountRule`, `CouponDiscountRule`) | Añadir una regla no toca las existentes (OCP) |
 | **Pipeline / Chain** | `DiscountPipeline` | Hace explícita la precedencia; cada paso recibe el total corriente |
 | **Factory** | `DiscountPipelineFactory` | Arma el pipeline por request; el cupón solo entra si existe |
 | **Port / Adapter** | `*Repository` en domain, JPA en infrastructure | Dominio independiente de la BD (DIP) |

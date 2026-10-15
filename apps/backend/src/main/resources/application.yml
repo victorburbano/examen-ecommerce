@@ -30,5 +30,10 @@ app:
     refresh-ttl-days: ${JWT_REFRESH_TTL_DAYS:7}
     cookie-secure: ${COOKIE_SECURE:false}
     allowed-origin: ${CORS_ALLOWED_ORIGIN:http://localhost:4200}
-
-# Se añade en su spec: app.discounts.* (003).
+  # Motor de descuentos (spec 003). La categoría usa el nombre del enum (DEC-018).
+  discounts:
+    category: ${DISCOUNT_CATEGORY:TECHNOLOGY}
+    category-percent: ${DISCOUNT_CATEGORY_PERCENT:10}
+    volume-threshold: ${DISCOUNT_VOLUME_THRESHOLD:100.00}
+    volume-percent: ${DISCOUNT_VOLUME_PERCENT:5}
+    max-total-percent: ${DISCOUNT_MAX_TOTAL_PERCENT:35}

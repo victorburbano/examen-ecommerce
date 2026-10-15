@@ -110,3 +110,24 @@ Formato: `DEC-NNN` · fecha · estado · contexto · decisión · alternativas �
 - **Decisión**: `CartStore` (`providedIn: 'root'`) con `signal` para las líneas y `computed` para subtotal/céntimos, nº de ítems y totales por línea. Cada línea guarda una **instantánea** del producto (nombre y precio) con su cantidad; si el producto desaparece del catálogo, la línea se mantiene con sus totales. El catálogo se carga con `resource` (loading/error/empty + `reload()`).
 - **Alternativas**: `localStorage` (el enunciado no lo pide y añade invalidez de precios); recalcular contra el backend en cada `+`/`-` (mata el "tiempo real"); servicio con `BehaviorSubject` (más código que los signals para lo mismo).
 - **Consecuencias**: el carrito sobrevive a la navegación y al login, no a un recargar; el precio mostrado es el del momento de añadir y el backend revalida al cotizar/comprar.
+
+## DEC-020 — Config del motor tipada con el enum de categoría y puente de infraestructura
+- **Fecha / estado**: 2026-10-15 · aceptada.
+- **Contexto**: el `plan.md` de la spec 003 proponía `app.discounts.category-name: Tecnología` (etiqueta en español), lo que **contradice DEC-018** (la categoría viaja como nombre de enum en inglés) y obligaría al dominio a traducir etiquetas.
+- **Decisión**: `app.discounts.category` se enlaza al **enum** `com.ecommerce.catalog.domain.Category` (`category: TECHNOLOGY`). `DiscountProperties` es un tipo de **dominio puro** (sin anotaciones); el binding de Spring vive en infraestructura: `DiscountSettings` (`@ConfigurationProperties(prefix = "app.discounts")`) + `DiscountConfig` (`@EnableConfigurationProperties` → `@Bean DiscountProperties`/`@Bean DiscountPipelineFactory`), siguiendo el patrón ya usado por `SecurityProperties`.
+- **Alternativas**: `String` en el dominio y `Category.valueOf` en el adaptador (más laxo, pero pierde el tipado fuerte que pide el enunciado); anotar el dominio con `@ConfigurationProperties` (rompería el aislamiento verificado por el test de arquitectura).
+- **Consecuencias**: el vocabulario de dominio es estable y una categoría inexistente en config **no arranca la app** (bind falla antes de construir el bean); el dominio sigue libre de Spring.
+
+## DEC-021 — Porcentaje escalonado por paso y tope como paso negativo
+- **Fecha / estado**: 2026-10-15 · aceptada (concreta DEC-007).
+- **Contexto**: el desglose debe **sumar exacto** el descuento mostrado y el tope del 35 % debe ser visible en la demo como una línea propia.
+- **Decisión**: cada regla redondea su importe a 2 decimales (`HALF_UP`) en su paso y produce una línea (`DiscountStep`). `DiscountCapPolicy` es la **única** clase que conoce el tope; si el acumulado lo supera, devuelve un paso `CAP_ADJUSTMENT` con el exceso en **negativo**, de modo que la suma de pasos es siempre `totalDiscount` (invariante verificada en todos los casos de la matriz). Solo `Money` (`round`, `percentOf`, `ratioAsPercent`) usa `RoundingMode`.
+- **Alternativas**: redondear una sola vez al final (el desglose podría no cuadrar); truncar el descuento del último paso en vez de añadir una línea (menos explícito en la demo).
+- **Consecuencias**: `capApplied = true` y la línea "Ajuste por tope de ahorro" permiten mostrar el tope en la UI (HU 4); el invariante "suma de pasos = descuento total" es comprobable en tests.
+
+## DEC-022 — Etiquetas del desglose en español desde el motor; el dato sigue siendo neutro
+- **Fecha / estado**: 2026-10-15 · aceptada.
+- **Contexto**: `DiscountStep` incluye un `label` que la UI muestra tal cual. Podría parecer que contradice DEC-018 (etiquetas solo en el front).
+- **Decisión**: el `label` es una **descripción de una línea calculada** (p. ej. `"Descuento de categoría"`, `"Cupón WELCOME2026"`, `"Ajuste por tope de ahorro"`) y se genera en el motor, porque la app es monolingüe y no hay capa i18n (YAGNI). El `percent` de un paso es **`null`** únicamente en `CAP_ADJUSTMENT`, que no es una tasa. El **dato** de categoría en el wire sigue siendo el nombre del enum (DEC-018): no se traduce ninguna categoría en el backend.
+- **Alternativas**: devolver solo el `type` y construir la etiqueta en el front (más trabajo por cada `type` nuevo y duplica el contrato); embeber el nombre de la categoría en la etiqueta (obligaría a traducir "Tecnología" en el backend).
+- **Consecuencias**: el front pinta el desglose sin mapear tipos; añadir una regla nueva que reutilice un tipo existente no requiere tocar la UI.

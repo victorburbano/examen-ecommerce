@@ -8,3 +8,9 @@ app:
     refresh-ttl-days: 7
     cookie-secure: false
     allowed-origin: http://localhost:4200
+  discounts:
+    category: TECHNOLOGY
+    category-percent: 10
+    volume-threshold: 100.00
+    volume-percent: 5
+    max-total-percent: 35

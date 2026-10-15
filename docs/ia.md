@@ -16,7 +16,7 @@ Asistentes usados: Claude Code (Anthropic) para el scaffold (spec 000) y OpenCod
 | `implement-feature` | Implementar una spec de punta a punta tras aprobar `plan.md` | `.agents/skills/implement-feature` |
 | Prompts por spec | Un `prompt.md` por spec con alcance, criterios y entrega | `specs/NNN-*/prompt.md` |
 
-Detalle de `discount-test-matrix`: *pendiente* (ejemplo de uso real al cerrar la spec 003).
+Detalle de `discount-test-matrix`: en la spec 003 se usó para fijar la tabla de casos (12 filas) del motor **antes** de codificar; los valores esperados se calcularon a mano y luego el `@ParameterizedTest` los verificó. Sirvió para destapar un error de cálculo (corrección 6) y para cubrir los bordes exigidos por el enunciado: umbral exacto (100.00 no aplica, 100.01 sí), `HALF_UP` en `.005`, tope alcanzado justo (35.00), tope superado (paso `CAP_ADJUSTMENT` negativo) y orden de reglas (pipeline permutado).
 
 ## 2. Sub-agentes
 | Agente | Rol y reglas | Archivo |
@@ -33,6 +33,7 @@ No disponibles fuera de Claude Code: en la spec 001 se hizo la revisión equival
 | 1 | 2026-10-15 | 000 | Entender el enunciado, proponer arquitectura y specs | Conversación de entrevista (Fase 0) | Decisiones DEC-001..011 | El humano corrigió: auth completo, cupones en BD, cap configurable |
 | 2 | 2026-10-15 | 001 | Implementar auth de punta a punta (backend + frontend) | Plan corto aprobado; skills `implement-feature` + `auth-jwt` | 82 tests backend (LINE 99.4 %, BRANCH 97.5 %) y 46 tests frontend (100 %); `mvnw verify`, lint y build verdes | El humano aprobó el plan corto; los tests de integración destaparon dos fallos (correcciones 1 y 2) |
 | 3 | 2026-10-15 | 002 | Catálogo público + carrito reactivo (HU 1) | Plan corto aprobado; el humano pidió **recomendación con razones** sobre 3 dudas de diseño (formato del precio, categoría en el wire, dinero en el front) antes de codificar | 104 tests backend (LINE 99.5 %, BRANCH 98.1 %) y 90 frontend (100 %); `mvnw verify`, lint y build verdes | Se aprobaron las 3 recomendaciones (DEC-017..019); la suite destapó un test flaky heredado y dos fallos en las specs nuevas (correcciones 4 y 5) |
+| 4 | 2026-10-15 | 003 | Motor de descuentos acumulativos con tope del 35 % (HU 2 y 4) | Plan corto aprobado; el humano pidió **recomendación con razones** sobre el conflicto entre `plan.md` (`category-name: Tecnología`) y DEC-018, y aprobó `app.discounts.category: TECHNOLOGY` + el puente de infraestructura | 195 tests backend (LINE 99.6 %, BRANCH 99.1 %; paquete `domain/discount` al **100 %** de líneas y ramas); `mvnw verify` verde | Se aprobó DEC-020; la tabla parametrizada destapó un error de cálculo a mano y un test mal planteado (correcciones 6 y 7) |
 
 ### Porcentaje de código asistido
 Método reproducible (`ia-log`): todos los commits llevan el trailer `Co-Authored-By`, así que se mide el diff del commit de cada spec con `git show --shortstat <commit>` y `git show --numstat <commit>`.
@@ -42,6 +43,9 @@ Spec 001 — líneas de **código** (cifra estable, independiente de la redacci�
 
 Spec 002 — líneas de **código** del diff: producción **1045** (Java main 349 · TS de componentes/servicios 254 · plantillas y CSS 421 · migraciones SQL 21) · tests **932** (Java 356 · specs Jest 576); 47 líneas de docs/specs. 49 archivos.
 **Código asistido por IA: 100 % de las líneas de código del diff**. El humano fijó los criterios de aceptación del `spec.md`, pidió y aprobó tres recomendaciones de diseño (DEC-017..019) y validó el plan corto antes de escribir código; la lógica de negocio del carrito (tope de stock, céntimos enteros) se revisó contra los casos de borde del enunciado.
+
+Spec 003 — líneas de **código** del diff: producción **543** (Java main: dominio puro 494 + infra de config 49) · tests **870** (Java) · config **13** (`application.yml` principal y de test); 71 líneas de docs/specs (incluye este `ia.md` y `MEMORY.md`). 41 archivos.
+**Código asistido por IA: 100 % de las líneas de código del diff**. El humano pidió una recomendación con razones sobre el conflicto entre `plan.md` y DEC-018 (categoría en config) y aprobó `app.discounts.category: TECHNOLOGY` + el puente de infraestructura (DEC-020) antes de codificar; los valores esperados del motor se calcularon **a mano** y el humano revisó el invariante "suma de pasos = descuento total".
 
 ### Correcciones a sugerencias de la IA (mínimo 2, reales)
 #### 1. El refresh revocaba la familia pero el rollback del 401 deshacía la revocación
@@ -73,3 +77,15 @@ Spec 002 — líneas de **código** del diff: producción **1045** (Java main 34
 - **Problema técnico**: un nombre seed real como `Monitor 27"` contiene una comilla doble, y el selector resultante (`button[aria-label="Añadir una unidad de Monitor 27""]`) es **inválido** (`SyntaxError` en jsdom). Los datos de prueba realistas rompen la técnica del helper.
 - **Corrección aplicada**: buscar el botón recorriendo `querySelectorAll('button')` y comparando `getAttribute('aria-label')` por igualdad (sin interpolación en el selector).
 - **Evidencia**: `apps/frontend/src/app/features/cart/cart-panel/cart-panel.spec.ts`; `npm run test:coverage` en verde (90 tests).
+
+#### 6. Porcentaje efectivo mal calculado a mano en la matriz de tests
+- **Sugerencia original** (spec 003): en la fila del caso "HALF_UP en `.005`" (`Hogar` por 100.10) la matriz esperaba un descuento de **5.01 %** sobre el subtotal.
+- **Problema técnico**: el importe del descuento es 5.01 (redondeo `HALF_UP` de 5.005), pero el **porcentaje efectivo** es `5.01 × 100 / 100.10 = 5.00499… %` → `HALF_UP` a escala 2 da **5.00 %**, no 5.01. El error estaba en el valor esperado escrito a mano, no en el motor.
+- **Corrección aplicada**: fijar la expectativa en 5.00 % (el importe 5.01 y el total 95.09 siguen igual).
+- **Evidencia**: `DiscountPipelineTest` (fila "half up on .005 in the volume step") y `MoneyTest.expressesARatioAsAPercent`; `./mvnw verify` en verde.
+
+#### 7. Test "no instanciable" contra una suposición falsa del propio código
+- **Sugerencia original** (spec 003): un test `MoneyTest.isNotInstantiable` que forzaba la reflexión sobre el constructor privado de `Money` y esperaba una `UnsupportedOperationException`.
+- **Problema técnico**: `Money` tiene un constructor privado **vacío** (idiom de clase de utilidades), así que `newInstance()` no lanza nada y el test falla con "Expecting code to raise a throwable". El test asumía un comportamiento que el código no tenía.
+- **Corrección aplicada**: eliminar el test (no hay nada que aseverar en un constructor privado vacío) y quitar el `assertThatThrownBy` que quedaba sin uso.
+- **Evidencia**: `apps/backend/src/test/java/com/ecommerce/checkout/domain/discount/MoneyTest.java`; `./mvnw verify` en verde (195 tests).
