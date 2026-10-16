@@ -3,8 +3,8 @@ import { authGuard } from './core/auth/auth.guard';
 
 /**
  * Rutas de la app. El catálogo (spec 002) es la página principal; auth (spec 001) aporta login y
- * registro en diferido; las órdenes (spec 005) requieren sesión. `authGuard`/`roleGuard` se aplican
- * a las rutas que lo requieran.
+ * registro en diferido; las órdenes (spec 005) requieren sesión (`authGuard`). El alcance por rol
+ * (lo que ve cada usuario) lo decide el backend, así que no hay guardas por rol en el front.
  */
 export const routes: Routes = [
   {

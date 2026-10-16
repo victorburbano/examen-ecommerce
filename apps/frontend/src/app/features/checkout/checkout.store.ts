@@ -2,8 +2,9 @@ import { Injectable, computed, effect, inject, signal, untracked } from '@angula
 import { Router } from '@angular/router';
 import { Observable, catchError, finalize, of, take, tap } from 'rxjs';
 import { CartStore } from '../cart/cart.store';
+import { isUnauthorized, problemCode } from '../../shared/error/problem-detail';
 import { CheckoutApiService } from './checkout-api.service';
-import { isUnauthorized, problemCode, toCheckoutMessage } from './checkout-error';
+import { toCheckoutMessage } from './checkout-error';
 import { Breakdown, Order, QuoteItem, QuoteRequest } from './checkout.models';
 
 /** Estado de la cotización. `idle` = carrito vacío (no hay checkout que mostrar). */

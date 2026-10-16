@@ -1,8 +1,8 @@
 # Gobernanza de IA
 
-> **Esqueleto (spec 000).** Se llena con hechos reales al cerrar cada spec (skill `ia-log`). Las secciones marcadas *pendiente* no contienen entradas inventadas a propósito.
+> **Final (cerrado en la spec 006).** Se llena con hechos reales al cerrar cada spec (skill `ia-log`). Ninguna entrada es inventada: cada corrección tiene su archivo y cada cifra su comando.
 
-Asistentes usados: Claude Code (Anthropic) para el scaffold (spec 000) y OpenCode para la implementación (specs 001 a 005). Método: Spec-Driven Development, un commit por spec.
+Asistentes usados: Claude Code (Anthropic) para el scaffold (spec 000) y OpenCode para la implementación (specs 001 a 006). Método: Spec-Driven Development, un commit por spec.
 
 ## 1. Skills / prompts automatizados
 | Skill | Qué automatiza | Dónde |
@@ -24,7 +24,10 @@ Detalle de `discount-test-matrix`: en la spec 003 se usó para fijar la tabla de
 | `code-auditor` | Solo lectura. Revisa el diff: SOLID, capas, `any`, dinero con `double`, constantes mágicas, N+1, seguridad. Marca **[ia-log]** lo que debe registrarse | `.claude/agents/code-auditor.md` |
 | `coverage-guard` | Corre las suites, exige ≥ 80 % LINE/BRANCH y revisa los casos de borde. No baja umbrales ni excluye archivos | `.claude/agents/coverage-guard.md` |
 
-No disponibles fuera de Claude Code: en la spec 001 se hizo la revisión equivalente a mano (diff contra SOLID, tipado sin `any`, cero lógica en controladores, umbrales verificados). Primer hallazgo real registrado en la sección 3 (corrección 1).
+No disponibles fuera de Claude Code: en cada spec se hizo la revisión equivalente a mano (diff contra SOLID, tipado sin `any`, cero lógica en controladores, umbrales verificados). La **auditoría final completa** se corrió en la spec 006 sobre todo el repo con este resultado:
+
+- **`code-auditor`** (solo lectura): revisados `apps/backend/src/main` y `apps/frontend/src` contra SOLID, capas, tipado, descuentos, eficiencia (N+1) y seguridad. **0 hallazgos críticos o importantes**; 3 menores, todos corregidos (correcciones 16–18). Evidencia de lo revisado: sin `any` (`@typescript-eslint/no-explicit-any`), sin `double` para dinero (solo `BigDecimal`), sin lógica en controllers, sin `TODO/FIXME`, sin tokens en logs/storage, paginado en BD y `@BatchSize` para evitar el N+1 en el listado de órdenes.
+- **`coverage-guard`**: backend `./mvnw verify` → **293 tests**, 0 fallos, LINE **99.79 %** / BRANCH **100.00 %**; frontend `npm run test:coverage` → **143 tests, 100 %**. Bordes del enunciado cubiertos (umbral 100.00 vs 100.01, tope exacto del 35 %, cupón inexistente/vencido, stock insuficiente, carrito vacío/corrupto). Único hueco: el `catch` inalcanzable de `SecureRandomRefreshTokenProvider.hash` (ver corrección 18). No se bajó ningún umbral ni se excluyó código.
 
 ## 3. Bitácora de co-creación
 ### Prompts clave
@@ -36,6 +39,7 @@ No disponibles fuera de Claude Code: en la spec 001 se hizo la revisión equival
 | 4 | 2026-10-15 | 003 | Motor de descuentos acumulativos con tope del 35 % (HU 2 y 4) | Plan corto aprobado; el humano pidió **recomendación con razones** sobre el conflicto entre `plan.md` (`category-name: Tecnología`) y DEC-018, y aprobó `app.discounts.category: TECHNOLOGY` + el puente de infraestructura | 195 tests backend (LINE 99.6 %, BRANCH 99.1 %; paquete `domain/discount` al **100 %** de líneas y ramas); `mvnw verify` verde | Se aprobó DEC-020; la tabla parametrizada destapó un error de cálculo a mano y un test mal planteado (correcciones 6 y 7) |
 | 5 | 2026-10-15 | 004 | Checkout: `quote` público, `orders` autenticado, cupones en BD, stock con `@Version` y reintento (HU 3) | Plan corto aprobado con 3 recomendaciones de diseño (unidad `@Transactional` + reintento fuera de ella, `PageResult` de dominio, desglose completo con carga en lote) | 290 tests backend (LINE **99.8 %**, BRANCH **99.4 %**); `mvnw verify` verde | Se aprobaron las 3 recomendaciones (DEC-023..025); la propia suite destapó dos fallos en tests nuevos (correcciones 8 y 9) y se remató el flaky heredado (corrección 10) |
 | 6 | 2026-10-15 | 005 | Checkout en el front: cupón, desglose, banner del tope, compra y órdenes (HU 2 y HU 4) | Plan corto aprobado; se cambió `resource` por un **store explícito con guarda de secuencia** (DEC-027) en vez del `resource`/`httpResource` que sugería `plan.md`, y se pidió recomendación de diseño sobre cómo distinguir el 409 | 145 tests frontend, **100 %** (stmts/branch/funcs/lines); `npm run lint` y `build` verdes; backend intacto (`mvnw verify` 290 tests, LINE 99.8 %/BRANCH 99.4 %) | Se aprobaron DEC-027..029; `lint` y la propia suite destaparon 5 fallos reales (correcciones 11–15) antes de cerrar |
+| 7 | 2026-10-15 | 006 | Cerrar docs y gobernanza: auditoría final, `arquitectura.md` y `ia.md` finales, README y guion de demo | Plan corto aprobado; se pidió **correr primero la auditoría** y entregar los hallazgos | Auditoría **sin hallazgos críticos/importantes** y 4 menores corregidos (16–19); `./mvnw verify` **293 tests** (LINE 99.79 %/BRANCH 100.00 %) y `npm run test:coverage` **143 tests 100 %** | El humano aprobó el plan; los 4 hallazgos menores se corrigieron y registraron (16–19). El documento final no inventa correcciones: se reescribió una entrada errónea (18) para reflejar la realidad |
 
 ### Porcentaje de código asistido
 Método reproducible (`ia-log`): todos los commits llevan el trailer `Co-Authored-By`, así que se mide el diff del commit de cada spec con `git show --shortstat <commit>` y `git show --numstat <commit>`.
@@ -54,6 +58,9 @@ Spec 004 — líneas de **código** del diff: producción **1569** (Java main 15
 
 Spec 005 — líneas de **código** del diff: producción **1223** (TS de store/servicios/componentes 544 · plantillas 225 · CSS 454) · tests **1286** (specs Jest) · docs/specs aparte (`decisiones.md`, `security.md`, `ia.md`, `MEMORY.md`, `specs/005`). 42 archivos.
 **Código asistido por IA: 100 % de las líneas de código del diff**. El humano fijó los criterios del `spec.md` (texto exacto del banner, estados visibles, casos de borde: cupón aplicado al cambiar el carrito, doble clic, respuesta obsoleta) y aprobó el cambio de diseño frente al `plan.md`: **store explícito con guarda de secuencia** en vez de `resource`/`httpResource` (DEC-027), y el modo de distinguir el 409 (DEC-028). La verificación manual con el backend en marcha (`WELCOME2026` → 3 líneas sin tope; `MEGA40` → 35.00 % con `capApplied`) se contrastó contra el motor real, no contra valores escritos a mano.
+
+Spec 006 — spec de **documentación y gobernanza**; su diff es sobre todo texto y, en código, un refactor **a la baja**. Líneas de **código** del diff: producción **56** nuevas y **−76** eliminadas (reescritura de `auth-error.ts`, `checkout-error.ts` y `checkout.store.ts` + extracción de `shared/error/problem-detail.ts`), tests **71** nuevas y **−57** eliminadas (se retiran los 3 tests de `roleGuard` y se reescribe el de la primitiva), y **343** líneas de docs/specs (`README.md`, `arquitectura.md`, `ia.md`, `demo.md`) con **84** eliminadas al cerrar los borradores. 14 archivos.
+**Código asistido por IA: 100 % de las líneas de código del diff**. El humano fijó el alcance del `spec.md` (auditoría final, documentación con hechos reales, guion de 7 min), aprobó el plan corto y **pidió correr primero la auditoría** entregándole los hallazgos. La IA corrió la auditoría (4 hallazgos menores), escribió los documentos y **capturó los datos de la demo en vivo** (cotizaciones, 409, compra y stock) en lugar de inventarlos. Al detectar que una entrada describía mal un test **ya existente**, se reescribió con el problema real (corrección 18); se añadió un test para cubrir una rama de cortocircuito (corrección 19).
 
 ### Correcciones a sugerencias de la IA (mínimo 2, reales)
 #### 1. El refresh revocaba la familia pero el rollback del 401 deshacía la revocación
@@ -145,3 +152,31 @@ Spec 005 — líneas de **código** del diff: producción **1223** (TS de store/
 - **Problema técnico**: el componente está en `features/orders/orders-page/`, así que `../checkout/...` apuntaba a `features/orders/checkout/...` y `./orders-api.service` al archivo dentro de `orders-page/`; el servicio está en `features/orders/`. `ng build` falló con `TS2307: Cannot find module`.
 - **Corrección aplicada**: `../../checkout/checkout.models` y `../orders-api.service` (verificar la profundidad real del árbol, no de memoria).
 - **Evidencia**: `apps/frontend/src/app/features/orders/orders-page/orders-page.ts`; `npm run build` en verde.
+
+#### 16. `roleGuard` implementado y testeado pero sin uso en producción (código muerto)
+- **Sugerencia original** (spec 001): añadir un `roleGuard(role)` genérico junto a `authGuard` "por si hiciera falta" una ruta por rol.
+- **Problema técnico**: en la app **nunca** se usa. La única ruta protegida es `/orders`, que exige sesión (`authGuard`) y cuyo alcance decide el **backend** (`` `USER` ve las suyas, `ADMIN` todas ``), así que no hay ninguna ruta por rol que guardar. El `plan.md` de la spec 005 ya lo declaraba innecesario. Es generalidad especulativa: código que hay que mantener y cubrir sin aportar.
+- **Corrección aplicada**: eliminar `roleGuard` y sus 3 tests; ajustar el comentario de `app.routes.ts` para explicar que el alcance por rol lo decide el backend.
+- **Evidencia**: `apps/frontend/src/app/core/auth/auth.guard.ts`, `app.routes.ts`; `npm run lint`/`test:coverage` en verde (143 tests).
+- **Marcada por `code-auditor` como [ia-log].** Severidad: menor.
+
+#### 17. Estrechado de `ProblemDetail` duplicado en dos mappers
+- **Sugerencia original**: en la spec 001, `auth-error.ts` estrecha la respuesta RFC 9457 con sus propios type guards (`isHttpErrorResponse`/`isProblemDetail`); en la spec 005, `checkout-error.ts` vuelve a hacerlo con `asRecord`/`problemCode`/`problemDetail`. Cada spec resolvió lo mismo por su cuenta.
+- **Problema técnico**: dos implementaciones del mismo parseo (código y `detail` del `ProblemDetail`) que pueden divergir (p. ej. una trata `detail` vacío y la otra no). Duplicación con riesgo de inconsistencia.
+- **Corrección aplicada**: extraer `shared/error/problem-detail.ts` (`isHttpErrorLike`, `problemCode`, `problemDetail`, `isUnauthorized`) y reusarlo en `auth-error.ts` y `checkout-error.ts`, con su propio `problem-detail.spec.ts`.
+- **Evidencia**: `apps/frontend/src/app/shared/error/problem-detail.ts`; `auth-error.ts` y `checkout-error.ts` reducidos a su lógica propia; `npm run test:coverage` en verde (100 %).
+- **Marcada por `code-auditor` como [ia-log].** Severidad: menor.
+
+#### 18. El test de la primitiva de refresh no probaba que el hash fuese realmente SHA-256
+- **Sugerencia original** (spec 001): el test de `SecureRandomRefreshTokenProvider` comprobaba el hash comparándolo consigo mismo (`hash(token)` con `provider.hash(token)`), lo que solo demuestra **determinismo**, no que el algoritmo sea SHA-256. `coverage-guard` dejó además 2 líneas sin cubrir en esa clase.
+- **Problema técnico**: un test que no fija el algoritmo no protege ante un cambio accidental (si `hash` pasara a MD5, seguiría en verde). Las 2 líneas sin cubrir son el `catch (NoSuchAlgorithmException)` de `hash`, **inalcanzable** porque SHA-256 está garantizado por el JVM (código defensivo, no un hueco real).
+- **Corrección aplicada**: reforzar el test con un **vector SHA-256 conocido** (`SHA-256("abc")`) y una aserción explícita de formato Base64 URL (43 caracteres); documentar el `catch` como defensa inalcanzable en `arquitectura.md`, en lugar de bajar umbrales o excluir código.
+- **Evidencia**: `apps/backend/src/test/java/com/ecommerce/auth/infrastructure/SecureRandomRefreshTokenProviderTest.java`; `./mvnw verify` en verde (**293 tests**, 0 fallos).
+- **Marcada por `code-auditor`/`coverage-guard` como [ia-log].** Severidad: menor.
+
+#### 19. Rama de cortocircuito del guard de refresh no cubierta
+- **Sugerencia original** (spec 006): `coverage-guard` identificó una rama sin cubrir en `RefreshService.refresh` (guard `null || isBlank()`).
+- **Problema técnico**: el cortocircuito de `isBlank()` no se evaluaba con valor `true` (solo se probó `null`; los demás tokens eran no en blanco).
+- **Corrección aplicada**: añadir un test que rechace tokens vacíos y en blanco (`""`, `"   "`), sin tocar el repositorio.
+- **Evidencia**: `apps/backend/src/test/java/com/ecommerce/auth/application/RefreshServiceTest.java`; `./mvnw verify` en verde (**293 tests**, BRANCH **100.00 %**).
+- **Marcada por `coverage-guard` como [ia-log].** Severidad: menor.

@@ -152,6 +152,14 @@ class RefreshServiceTest {
     }
 
     @Test
+    void rejectsABlankTokenWithoutTouchingTheRepository() {
+        assertThatThrownBy(() -> service.refresh("")).isInstanceOf(InvalidRefreshTokenException.class);
+        assertThatThrownBy(() -> service.refresh("   ")).isInstanceOf(InvalidRefreshTokenException.class);
+
+        verify(refreshTokenRepository, never()).findByTokenHash(any());
+    }
+
+    @Test
     void hashesThePresentedTokenToLookItUp() {
         when(refreshTokenRepository.findByTokenHash("hash-old")).thenReturn(Optional.empty());
 

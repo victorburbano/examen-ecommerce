@@ -4,7 +4,7 @@
 > **Al empezar una sesión**: léelo. **Al terminar**: actualiza "Estado", "Pendiente" y "Bitácora de sesiones".
 
 - **Última actualización**: 2026-10-15
-- **Estado global**: specs 000–005 completas; spec 006 (docs/gobernanza, README y demo) pendiente.
+- **Estado global**: specs 000–006 completas; CI no ejecutado aún (sin remoto).
 
 ## 1. Estado por spec
 | Spec | Estado | Notas |
@@ -15,7 +15,7 @@
 | 003 discount-engine | ✅ | Motor de dominio puro + cascada + tope del 35 %, verificado (195 tests, `domain/discount` al 100 %) |
 | 004 checkout-backend | ✅ | `quote` público + `orders` autenticado, cupones en BD, stock con `@Version` + reintento, migraciones V5/V6, verificado (290 tests, 99.8 %/99.4 %) |
 | 005 checkout-frontend | ✅ | Cupón, desglose, banner del tope, compra (401/409) y órdenes; `CheckoutStore` con descarte de respuestas obsoletas; verificado (145 tests front, **100 %**) y commit |
-| 006 docs-governance | ⛔ | `arquitectura.md`, `ia.md` finales, README, demo |
+| 006 docs-governance | ✅ | Arquitectura, gobernanza de IA, README y guion de demo cerrados en este lote de cambios |
 
 **Verificación de la spec 005 (2026-10-15)**
 - Frontend: `npm run test:coverage` → **145 tests, 100 %** en stmts/branch/funcs/lines; `npm run lint` y `npm run build` OK.
@@ -87,10 +87,10 @@ Ver [docs/decisiones.md](docs/decisiones.md) (DEC-001..029). Resumen: tope del 3
 - **`CurrencyPipe` acepta un `string`**: se pueden pintar los importes `string` del backend directamente (`{{ total | currency: 'USD' }}`) sin convertirlos a número.
 - No uses `rm` con globs relativos en la shell de Claude (el sandbox lo bloquea); usa rutas absolutas.
 
-## 4. Pendiente (no vinculado a una spec)
-- Aprobar e instalar Context7 (`resources` vacío ⇒ docs oficiales vía webfetch).
-- Crear el repo remoto público en GitHub y ejecutar el CI una vez.
-- Rellenar `docs/ia.md` con correcciones **reales** conforme ocurran (`ia-log`).
+- **Verificación de la spec 006 (2026-10-15)**
+- Backend: `./mvnw verify` → **293 tests**, 0 fallos; JaCoCo LINE **99.79 %** (971/973), BRANCH **100.00 %** (180/180). El hueco restante es el `catch (NoSuchAlgorithmException)` de `SecureRandomRefreshTokenProvider.hash` (defensivo, inalcanzable). Se añadió un test para cubrir la rama del guard de refresh (token vacío/en blanco).
+- Frontend: `npm run test:coverage` → **143 tests, 100 %** (stmts/branch/funcs/lines); `npm run lint` y `npm run build` OK.
+- Auditoría final: 0 críticos/importantes, 4 menores (16–19). Documentación escrita: `docs/arquitectura.md`, `docs/ia.md`, `README.md`, `docs/demo.md`.
 
 ## 5. Bitácora de sesiones
 | Fecha | Qué se hizo |
@@ -100,4 +100,13 @@ Ver [docs/decisiones.md](docs/decisiones.md) (DEC-001..029). Resumen: tope del 3
 | 2026-10-15 | Spec 002 completa: catálogo público (`GET /api/products`, precio string, `@Version`) + carrito reactivo (signals, céntimos enteros, tope de stock) y página con estados loading/error/empty; 104 tests backend (99.5 %/98.1 %) y 90 frontend (100 %); DEC-017..019 y `ia.md` actualizados |
 | 2026-10-15 | Spec 003 completa: motor de descuentos acumulativos de **dominio puro** (`checkout/domain/discount`: Strategy + Pipeline + Factory, cascada, tope del 35 % como paso negativo `CAP_ADJUSTMENT`, `Money` único con `HALF_UP`) + puente de config `DiscountSettings`/`DiscountConfig`; 195 tests backend (LINE 99.6 %/BRANCH 99.1 %, paquete de dominio al **100 %**); DEC-020..022, `arquitectura.md` e `ia.md` (prompt 4, %, correcciones 6-7) actualizados |
 | 2026-10-15 | Spec 004 completa: checkout backend — `POST /api/checkout/quote` (público) y `POST /api/checkout/orders` (autenticado) con cálculo compartido, cupones en BD (`V5`/`V6`), stock con `@Version` + `ProductRepository.save` (`saveAndFlush`) y reintento acotado (`CheckoutTransaction` + `CheckoutService`), órdenes persistidas con desglose completo y consulta por rol/propiedad (`GET /api/orders`, `/{id}`); árbol de errores `ProblemDetail` con `code`; **290 tests** (LINE 99.8 %/BRANCH 99.4 %, incluye concurrencia por la última unidad y rollback multi-línea); DEC-023..026, `security.md`, `ia.md` (prompt 5, %, correcciones 8-10) y este `MEMORY.md` actualizados |
+## 5. Bitácora de sesiones
+| Fecha | Qué se hizo |
+|---|---|
+| 2026-10-15 | Entrevista (15 preguntas), verificación de versiones, propuesta aprobada, scaffold completo (spec 000): skills, agentes, docs, specs 001–006, esqueletos verificados |
+| 2026-10-15 | Spec 001 completa: backend auth (JWT Nimbus, refresh rotado con detección de reutilización, roles) + frontend (store, interceptor con refresh único, guards, Signal Forms, cabecera); 82 tests backend (99.4 %/97.5 %) y 46 frontend (100 %); docs de cierre y `ia.md` actualizados |
+| 2026-10-15 | Spec 002 completa: catálogo público (`GET /api/products`, precio string, `@Version`) + carrito reactivo (signals, céntimos enteros, tope de stock) y página con estados loading/error/empty; 104 tests backend (99.5 %/98.1 %) y 90 frontend (100 %); DEC-017..019 y `ia.md` actualizados |
+| 2026-10-15 | Spec 003 completa: motor de descuentos acumulativos de **dominio puro** (`checkout/domain/discount`: Strategy + Pipeline + Factory, cascada, tope del 35 % como paso negativo `CAP_ADJUSTMENT`, `Money` único con `HALF_UP`) + puente de config `DiscountSettings`/`DiscountConfig`; 195 tests backend (LINE 99.6 %/BRANCH 99.1 %, paquete de dominio al **100 %**); DEC-020..022, `arquitectura.md` e `ia.md` (prompt 4, %, correcciones 6-7) actualizados |
+| 2026-10-15 | Spec 004 completa: checkout backend — `POST /api/checkout/quote` (público) y `POST /api/checkout/orders` (autenticado) con cálculo compartido, cupones en BD (`V5`/`V6`), stock con `@Version` + `ProductRepository.save` (`saveAndFlush`) y reintento acotado (`CheckoutTransaction` + `CheckoutService`), órdenes persistidas con desglose completo y consulta por rol/propiedad (`GET /api/orders`, `/{id}`); árbol de errores `ProblemDetail` con `code`; **290 tests** (LINE 99.8 %/BRANCH 99.4 %, incluye concurrencia por la última unidad y rollback multi-línea); DEC-023..026, `security.md`, `ia.md` (prompt 5, %, correcciones 8-10) y este `MEMORY.md` actualizados |
 | 2026-10-15 | Spec 005 completa: checkout del frontend — `CheckoutStore` (re-cotización con descarte de respuestas obsoletas), `CheckoutApiService`, mapper `ProblemDetail`→ES, componentes `CheckoutPanel`/`CouponForm` (Signal Forms)/`BreakdownTable`/`CapAlert` (texto exacto, `role="status"`)/`OrderConfirmation`, integración en el catálogo, y `features/orders` (`OrdersPage` paginada + ruta `/orders` con `authGuard`); **145 tests front (100 %)** y backend intacto (290 tests, 99.8 %/99.4 %); DEC-027..029, `security.md`, `ia.md` (prompt 6, %, correcciones 11–15) y este `MEMORY.md` actualizados |
+| 2026-10-15 | Spec 006 completa: auditoría final (0 críticos/importantes, 4 menores), documentación final (`arquitectura.md`, `ia.md`, `README.md`, `demo.md`) y cierre de gobernanza; backend **293 tests**, BRANCH **100.00 %**, LINE **99.79 %**; frontend **143 tests, 100 %**; DEC-030–031, `tasks.md` marcadas y commit pendiente |

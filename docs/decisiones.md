@@ -175,3 +175,17 @@ Formato: `DEC-NNN` · fecha · estado · contexto · decisión · alternativas �
 - **Decisión**: `LoginPage` solo acepta un `returnUrl` que empiece por `/` y **no** por `//`; en cualquier otro caso navega a `/`. El acceso token sigue viviendo solo en memoria, así que el carrito (en memoria) se conserva al volver.
 - **Alternativas**: confiar el destino a `window.history.back()` (pierde el destino si se entró directo); aceptar la URL tal cual (riesgo de redirección externa).
 - **Consecuencias**: se conserva el flujo "login → volver al checkout" sin habilitar redirecciones externas; hay test del `returnUrl` externo rechazado.
+
+## DEC-030 — Parseo del `ProblemDetail` centralizado en el front
+- **Fecha / estado**: 2026-10-15 · aceptada.
+- **Contexto**: la auditoría final detectó que `auth-error.ts` (spec 001) y `checkout-error.ts` (spec 005) estrechaban por su cuenta la respuesta RFC 9457 del backend (type guards propios en uno, `asRecord` en el otro).
+- **Decisión**: un único módulo `apps/frontend/src/app/shared/error/problem-detail.ts` (`isHttpErrorLike`, `problemCode`, `problemDetail`, `isUnauthorized`); los mappers de cada feature solo aportan sus mensajes. Sin `any` (estrechado manual).
+- **Alternativas**: dejar la duplicación (riesgo de divergencia, p. ej. el trato del `detail` vacío); un wrapper que reexportara desde `checkout-error` (deja el acoplamiento).
+- **Consecuencias**: una sola interpretación del contrato de errores; menos líneas en los mappers; cubierto por `problem-detail.spec.ts`.
+
+## DEC-031 — Cobertura: sin exclusiones; el código defensivo inalcanzable se documenta
+- **Fecha / estado**: 2026-10-15 · aceptada.
+- **Contexto**: `coverage-guard` dejó como único hueco (2 líneas, 1 rama) el `catch (NoSuchAlgorithmException)` de `SecureRandomRefreshTokenProvider.hash` y una rama de `RefreshService`; ambos son defensivos (SHA-256 está garantizado; la rama es de un camino ya probado).
+- **Decisión**: **no** excluir archivos ni bajar el umbral para "llegar al 100 %". Se mantiene el umbral del 80 % (DEC-011) y el hueco se justifica por escrito en `arquitectura.md`. Se refuerza la aserción del test existente (vector SHA-256 conocido) en lugar de "jugar" la métrica.
+- **Alternativas**: `@Generated`/exclusiones (oculta el número real); forzar la rama con mocks de estáticos (test artificial sin valor).
+- **Consecuencias**: la métrica es honesta; el hueco queda explicado y auditable.
