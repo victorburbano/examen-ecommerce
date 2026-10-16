@@ -3,8 +3,9 @@
 > `AGENTS.md` es la fuente de verdad de convenciones; este archivo registra **qué ya está hecho**, **qué falta** y **qué no hay que volver a decidir**.
 > **Al empezar una sesión**: léelo. **Al terminar**: actualiza "Estado", "Pendiente" y "Bitácora de sesiones".
 
-- **Última actualización**: 2026-10-15
-- **Estado global**: specs 000–006 completas; CI no ejecutado aún (sin remoto).
+**Última actualización**: 2026-10-15
+- **Estado global**: specs 000–006 completas. Commit `f8df7bf` cierra la spec 006.
+- **CI**: no ejecutado aún (sin remoto).
 
 ## 1. Estado por spec
 | Spec | Estado | Notas |
