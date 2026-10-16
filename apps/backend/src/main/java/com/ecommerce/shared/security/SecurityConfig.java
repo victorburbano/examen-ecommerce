@@ -31,6 +31,9 @@ public class SecurityConfig {
         "/api/auth/register", "/api/auth/login", "/api/auth/refresh", "/api/auth/logout"
     };
 
+    /** Consola H2 (solo local/demo, ver DEC-032): se permite sin auth y necesita frames. */
+    private static final String H2_CONSOLE_PATH = "/h2-console/**";
+
     @Bean
     public SecurityFilterChain securityFilterChain(
             HttpSecurity http,
@@ -40,12 +43,14 @@ public class SecurityConfig {
         http.csrf(csrf -> csrf.disable())
                 .cors(Customizer.withDefaults())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .headers(headers -> headers.frameOptions(frame -> frame.sameOrigin()))
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers(PUBLIC_AUTH_ENDPOINTS).permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/checkout/quote").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/products", "/api/products/**").permitAll()
                         .requestMatchers("/actuator/health").permitAll()
+                        .requestMatchers(H2_CONSOLE_PATH).permitAll()
                         .anyRequest().authenticated())
                 .oauth2ResourceServer(oauth2 -> oauth2
                         .jwt(jwt -> jwt.jwtAuthenticationConverter(RolesClaimJwtAuthenticationConverter.create()))

@@ -58,14 +58,16 @@ docs/{requirements,arquitectura,ia,decisiones,security}.md  docs/prompts/
 
 ## Comandos
 ```bash
-# Backend (desde apps/backend)
-./mvnw verify                 # tests + JaCoCo (falla si < 80 % LINE o BRANCH)
-./mvnw spring-boot:run        # http://localhost:8080
+# Backend (desde apps/backend) — Linux/macOS/Git Bash
+./mvnw verify                 # tests + JaCoCo (falla si < 80 % LINE o BRANCH); no requiere JWT_SECRET
+JWT_SECRET="$(openssl rand -base64 48)" ./mvnw spring-boot:run   # http://localhost:8080 (requiere JWT_SECRET ≥ 32 bytes)
 # Frontend (desde apps/frontend)
 npm ci
 npm run test:coverage         # Jest, umbral 80 % en jest.config.js
 npm run lint && npm run build && npm start   # http://localhost:4200
 ```
+**Windows/PowerShell**: `.\mvnw.cmd verify` y `.\mvnw.cmd spring-boot:run` (con `$env:JWT_SECRET = "..."`, ≥ 32 bytes; en CMD, `set JWT_SECRET=...`); `./mvnw` → `.\mvnw.cmd` y el separador `&&` → `;`.
+URLs locales: front `http://localhost:4200` · back `http://localhost:8080` (`/actuator/health`) · BD H2 **en memoria** `jdbc:h2:mem:shop` (usuario `sa`, contraseña vacía) · **consola H2** `http://localhost:8080/h2-console` (JDBC `jdbc:h2:mem:shop`, `sa`, vacío; solo local/demo, [DEC-032](docs/decisiones.md)). Instrucciones completas y comandos para generar `JWT_SECRET` en cada SO: [README](README.md).
 CI en `.github/workflows/ci.yml`.
 
 ## Seguridad

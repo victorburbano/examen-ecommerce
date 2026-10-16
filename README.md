@@ -12,19 +12,79 @@ Java 25 · Spring Boot 4.1.1 · Spring Data JPA + Flyway + H2 en memoria · Spri
 - **Node** `^22.22.3 || ^24.15.0 || ^26` y npm.
 - Maven **no** hace falta: el wrapper (`.mvn/wrapper`) está incluido.
 
-## Inicio rápido
-```bash
-# Backend (terminal 1)
-cd apps/backend
-export JWT_SECRET="$(openssl rand -base64 48)"   # obligatorio, ≥ 32 bytes (ver .env.example)
-./mvnw spring-boot:run                            # http://localhost:8080
+## Inicio rápido (local)
+Requisitos: los de la sección anterior. Maven **no** hace falta (se usa el wrapper `./mvnw` en Linux/macOS y `.\mvnw.cmd` en Windows).
 
-# Frontend (terminal 2)
-cd apps/frontend
-npm ci
-npm start                                         # http://localhost:4200
+> `JWT_SECRET` es **obligatorio y debe medir ≥ 32 bytes**; si falta o es más corto, el backend **no arranca** ([cómo generarlo](#si-jwt_secret-te-da-problemas)).
+
+**1) Backend — terminal 1**
+
+*Linux / macOS / Git Bash:*
+```bash
+cd apps/backend
+export JWT_SECRET="$(openssl rand -base64 48)"      # obligatorio, ≥ 32 bytes
+./mvnw spring-boot:run                              # → http://localhost:8080
 ```
-> En **Windows/PowerShell**: `$env:JWT_SECRET = "..."` y `.\mvnw.cmd spring-boot:run`. El frontend llama a la API por el proxy de `npm start` (`proxy.conf.json` → `http://localhost:8080`), así que basta con abrir `http://localhost:4200`.
+
+*Windows (PowerShell):*
+```powershell
+cd apps\backend
+$env:JWT_SECRET = [Convert]::ToBase64String((1..48 | ForEach-Object { Get-Random -Max 256 }))
+.\mvnw.cmd spring-boot:run                          # → http://localhost:8080
+```
+
+**2) Frontend — terminal 2**
+
+*Linux / macOS / Git Bash:*
+```bash
+cd apps/frontend
+npm ci                                              # solo la primera vez (o si falta node_modules)
+npm start                                           # → http://localhost:4200
+```
+
+*Windows (PowerShell):*
+```powershell
+cd apps\frontend
+npm ci
+npm start                                           # → http://localhost:4200
+```
+
+El SPA llama a la API por el **proxy** de `npm start` ([proxy.conf.json](apps/frontend/proxy.conf.json) → `http://localhost:8080`), así que basta con abrir **http://localhost:4200**.
+
+### Si `JWT_SECRET` te da problemas
+Es **obligatorio** y debe medir **≥ 32 bytes**; si falta o es más corto, el backend falla al arrancar (`SecurityProperties`). En local vale cualquier valor de 32+ bytes:
+
+**Linux / macOS / Git Bash**
+```bash
+export JWT_SECRET="$(openssl rand -base64 48)"
+```
+
+**Windows (PowerShell)** — sin depender de `openssl`:
+```powershell
+$env:JWT_SECRET = [Convert]::ToBase64String((1..48 | ForEach-Object { Get-Random -Max 256 }))
+```
+
+**Cualquier plataforma con Node** (ya es requisito del front):
+```bash
+# bash:       export JWT_SECRET="$(node -e "console.log(require('crypto').randomBytes(48).toString('base64'))")"
+# PowerShell: $env:JWT_SECRET = node -e "console.log(require('crypto').randomBytes(48).toString('base64'))"
+```
+
+**Valor literal** (si prefieres fijarlo a mano): cualquier cadena de 32+ caracteres, p. ej. `dev-local-secret-cambia-esto-0123456789abcdef`.
+
+> `./mvnw verify` **no** necesita `JWT_SECRET`: los tests usan un secreto fijo en `src/test/resources/application.yml`.
+
+## URLs locales y credenciales de prueba
+| Servicio | URL / conexión | Credenciales |
+|---|---|---|
+| **Frontend** (SPA Angular) | `http://localhost:4200` | usuarios seed ([abajo](#usuarios-y-cupones-de-prueba)) |
+| **Backend** (API REST) | `http://localhost:8080` | JWT (`Authorization: Bearer <accessToken>`) |
+| **Salud del backend** | `http://localhost:8080/actuator/health` | público |
+| **Base de datos** (H2 en memoria) | `jdbc:h2:mem:shop;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE` | usuario `sa` · contraseña *(vacía)* |
+| **Consola H2** (inspeccionar la BD) | `http://localhost:8080/h2-console` | JDBC URL `jdbc:h2:mem:shop` · usuario `sa` · contraseña *(vacía)* |
+
+> La BD es **H2 en memoria, embebida en el backend**: no hay servidor separado y los datos (con el seed de Flyway `V1`–`V6`) **se reinician en cada arranque**.
+> Para verlo desde el navegador, abre **`http://localhost:8080/h2-console`**, pega `jdbc:h2:mem:shop` en *JDBC URL* (usuario `sa`, contraseña vacía) y pulsa *Connect*. Es una utilidad **solo local/demo** ([DEC-032](docs/decisiones.md)); en producción se desactiva.
 
 ## Variables de entorno
 Copia [.env.example](.env.example) a `.env` (nunca se versiona `.env`). Todas tienen valor por defecto **salvo `JWT_SECRET`**, que es obligatorio:
@@ -62,6 +122,8 @@ Cupones seed (`V6__seed_coupons.sql`):
 Productos seed (`V4__seed_products.sql`): ids 1–8, con uno de stock bajo (id 6, stock 2) y uno sin stock (id 8, stock 0) para probar el 409.
 
 ## Pruebas y cobertura (umbral 80 %)
+
+*Linux / macOS / Git Bash:*
 ```bash
 # Backend: tests + JaCoCo (el build FALLA si LINE o BRANCH < 80 %)
 cd apps/backend && ./mvnw verify
@@ -74,11 +136,29 @@ cd apps/frontend && npm run test:coverage
 # Frontend: lint + build
 cd apps/frontend && npm run lint && npm run build
 ```
+
+*Windows (PowerShell):*
+```powershell
+# Backend: tests + JaCoCo
+cd apps\backend
+.\mvnw.cmd verify
+#   reporte: apps\backend\target\site\jacoco\index.html
+
+# Frontend: Jest con cobertura
+cd ..\frontend
+npm run test:coverage
+#   reporte: apps\frontend\coverage\lcov-report\index.html
+
+# Frontend: lint + build
+npm run lint
+npm run build
+```
+
 Cifras actuales (verificadas 2026-10-15):
 
 | Suite | Tests | Cobertura |
 |---|---|---|
-| Backend | **292** (0 fallos) | LINE **99.79 %** (971/973) · BRANCH **99.44 %** (179/180) |
+| Backend | **293** (0 fallos) | LINE **99.79 %** (971/973) · BRANCH **100.00 %** (180/180) |
 | Frontend | **143** | **100 %** statements / branches / functions / lines |
 
 ## API

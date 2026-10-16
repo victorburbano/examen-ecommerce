@@ -3,13 +3,63 @@
 Objetivo: mostrar las 4 HU y los casos de borde del enunciado con datos reales. Todos los importes de esta página se capturaron ejecutando la app (2026-10-15) contra el backend descrito.
 
 ## Preparación (antes de empezar)
+Requisitos: **JDK 25** y **Node `^22.22.3 || ^24.15.0 || ^26`**. Maven no hace falta (se usa el wrapper `./mvnw` / `.\mvnw.cmd`). `JWT_SECRET` es **obligatorio** y debe medir **≥ 32 bytes** o el backend no arranca.
+
+**Linux / macOS / Git Bash** (desde la raíz del repo):
 ```bash
-# Terminal 1 — backend (JWT_SECRET obligatorio)
+# Terminal 1 — backend (genera un secreto aleatorio)
 cd apps/backend && JWT_SECRET="$(openssl rand -base64 48)" ./mvnw spring-boot:run
 # Terminal 2 — frontend
 cd apps/frontend && npm ci && npm start
 ```
-Abrir `http://localhost:4200`. H2 es en memoria: cada reinicio del backend recarga el seed. Credenciales y cupones en el [README](../README.md).
+
+**Windows (PowerShell)** (desde la raíz del repo):
+```powershell
+# Terminal 1 — backend
+cd apps\backend
+$env:JWT_SECRET = "dev-local-secret-cambia-esto-0123456789abcdef"   # ≥ 32 bytes
+.\mvnw.cmd spring-boot:run
+# Terminal 2 — frontend
+cd apps\frontend
+npm ci
+npm start
+```
+
+### Si `JWT_SECRET` da problemas
+Debe medir **≥ 32 bytes** o el backend no arranca. Comandos exactos por plataforma:
+
+```bash
+# Linux / macOS / Git Bash
+export JWT_SECRET="$(openssl rand -base64 48)"
+```
+```powershell
+# Windows (PowerShell)
+$env:JWT_SECRET = [Convert]::ToBase64String((1..48 | ForEach-Object { Get-Random -Max 256 }))
+```
+> Alternativa en cualquier SO: una cadena literal de 32+ caracteres, p. ej. `dev-local-secret-cambia-esto-0123456789abcdef`.
+
+### URLs locales y credenciales de prueba
+| Servicio | URL / conexión | Credenciales |
+|---|---|---|
+| **Frontend** (SPA) | `http://localhost:4200` | usuarios seed ([README](../README.md)) |
+| **Backend** (API) | `http://localhost:8080` | JWT: `Authorization: Bearer <accessToken>` |
+| **Salud del backend** | `http://localhost:8080/actuator/health` | público |
+| **Base de datos** (H2 en memoria) | `jdbc:h2:mem:shop;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE` | usuario `sa` · contraseña *(vacía)* |
+| **Consola H2** (ver la BD) | `http://localhost:8080/h2-console` | JDBC URL `jdbc:h2:mem:shop` · usuario `sa` · contraseña *(vacía)* |
+
+Abrir `http://localhost:4200` (el proxy de `npm start` reenvía `/api` a `http://localhost:8080`). La BD es **H2 en memoria embebida** (sin servidor aparte): cada reinicio del backend recarga el seed. Usuarios y cupones en el [README](../README.md).
+
+### Ver la base de datos desde el navegador (consola H2)
+1. Con el backend en marcha, abrir **`http://localhost:8080/h2-console`**.
+2. En *JDBC URL* poner `jdbc:h2:mem:shop` · *User* `sa` · *Password* vacío → **Connect**.
+3. Consultas útiles para la demo:
+   - `SELECT * FROM products;` — stock antes/después de una compra.
+   - `SELECT code, percent, valid_from, valid_to FROM coupons;` — cupones seed.
+   - `SELECT * FROM orders;` y `SELECT * FROM order_discounts;` — orden persistida con su desglose.
+   > Es una utilidad **solo local/demo** (`/h2-console` queda público, ver [DEC-032](decisiones.md)); en producción se desactiva.
+
+
+> Los ejemplos con `curl` de este guion usan sintaxis **bash** (incluida la continuación de línea con `\`): en Windows ejecútalos en Git Bash/WSL o usa `curl.exe`/`Invoke-RestMethod`.
 
 ## 0:00–1:00 · Catálogo (HU 1)
 - La página principal lista los productos seed con **precio como string exacto** (`"59.90"`), categoría y stock.
@@ -121,7 +171,7 @@ El equipo ya usa Jest; `jest-preset-angular` 17 soporta Angular 22 zoneless. La 
 `authInterceptor` marca la petición ya reintentada (`HttpContextToken`) y hace **un único** refresh compartido (`shareReplay`) para las peticiones concurrentes; si el refresh falla, cierra la sesión y va a `/login` con `returnUrl` saneado (solo rutas internas).
 
 **10. ¿Cobertura real y cómo se fuerza el umbral?**
-Backend **292 tests**, LINE 99.79 % / BRANCH 99.44 % (JaCoCo falla el build < 80 %); frontend **143 tests, 100 %** (umbral en `jest.config.js`). Único hueco: un `catch` inalcanzable (SHA-256 garantizado por el JVM).
+Backend **293 tests**, LINE 99.79 % / BRANCH 100.00 % (JaCoCo falla el build < 80 %); frontend **143 tests, 100 %** (umbral en `jest.config.js`). Único hueco: un `catch` inalcanzable (SHA-256 garantizado por el JVM).
 
 **11. ¿Qué cambiaríais para producción?**
 H2 → PostgreSQL (misma capa JPA), `COOKIE_SECURE=true` + HTTPS, rotación de `JWT_SECRET`, rate limiting de login, y stock distribuido (el lock optimista es de una sola instancia).

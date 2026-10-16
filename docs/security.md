@@ -12,6 +12,7 @@ Detalle de implementación en el skill `auth-jwt`. Se completa en las specs 001 
 | Validación | `jakarta.validation` en DTOs; el checkout recalcula y nunca confía en totales del cliente |
 | Errores | `ProblemDetail`; sin stack traces ni datos sensibles |
 | Secretos | Solo `.env.example`; usuarios seed con contraseñas de **prueba** (README) |
+| Consola H2 (`/h2-console`) | **Solo local/demo** ([DEC-032](decisiones.md)): habilitada (`spring-boot-h2console`, módulo propio en Boot 4) y **sin autenticación** para inspeccionar la BD en la demo, con `frameOptions().sameOrigin()`. En producción se desactiva (`spring.h2.console.enabled=false`) o se retira el módulo del build |
 | Pendiente (mejora) | Rate limiting / lockout de login, rotación de `JWT_SECRET`, HTTPS |
 
 ## Revisión de la spec 001 (2026-10-15)
@@ -46,7 +47,7 @@ Comprobaciones del prompt `docs/prompts/security-review.md` sobre el checkout (h
 | Cupones | ✅ Existen y vigencia (inclusiva) verificadas con `Clock` inyectado; inexistente/vencido → 422 con código distinto, sin filtrar datos de otros cupones |
 | Secretos / CORS | ✅ Sin cambios: sin secretos en el repo; CORS sigue acotado a `app.security.allowed-origin` |
 
-Revisión equivalente a `code-auditor` y `coverage-guard` (no disponibles fuera de Claude Code): diff revisado a mano contra SOLID (Strategy/Pipeline/Factory ya de la spec 003, Port/Adapter en el checkout, cero lógica en controllers), tipado estricto (sin `any` en Java, records para DTOs), dinero siempre `BigDecimal`/strings y umbrales de cobertura verificados (`./mvnw verify` en verde, LINE 99.8 % / BRANCH 99.4 %).
+Revisión equivalente a `code-auditor` y `coverage-guard` (no disponibles fuera de Claude Code): diff revisado a mano contra SOLID (Strategy/Pipeline/Factory ya de la spec 003, Port/Adapter en el checkout, cero lógica en controllers), tipado estricto (sin `any` en Java, records para DTOs), dinero siempre `BigDecimal`/strings y umbrales de cobertura verificados (`./mvnw verify` en verde, LINE 99.79 % / BRANCH 100.00 %).
 
 ## Revisión de la spec 005 (2026-10-15)
 

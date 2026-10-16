@@ -100,7 +100,9 @@ Evidencia del aislamiento: `DiscountDomainArchitectureTest` (backend) y la ausen
 ## 6. Evidencia de cobertura (spec 006)
 | Suite | Comando | Tests | Cobertura |
 |---|---|---|---|
-| Backend | `cd apps/backend && ./mvnw verify` | **292** (0 fallos) | LINE **99.79 %** (971/973) · BRANCH **99.44 %** (179/180) |
+| Backend | `cd apps/backend && ./mvnw verify` | **293** (0 fallos) | LINE **99.79 %** (971/973) · BRANCH **100.00 %** (180/180) |
 | Frontend | `cd apps/frontend && npm run test:coverage` | **143** | **100 %** en statements / branches / functions / lines |
+
+> En **Windows/PowerShell** los mismos comandos son `cd apps\backend; .\mvnw.cmd verify` y `cd apps\frontend; npm run test:coverage` (ver [README](../README.md)).
 
 Único hueco (justificado): el `catch (NoSuchAlgorithmException)` de `SecureRandomRefreshTokenProvider.hash` (2 líneas) es inalcanzable porque SHA-256 está garantizado por el JVM. El umbral del build es ≥ 80 % ([DEC-011](decisiones.md)). Reporte JaCoCo: `apps/backend/target/site/jacoco/index.html`.
