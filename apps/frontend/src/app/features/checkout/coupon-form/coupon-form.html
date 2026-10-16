@@ -1,0 +1,29 @@
+<form class="coupon" (submit)="onSubmit($event)" novalidate>
+  <div class="field">
+    <label for="checkout-coupon">Cupón</label>
+    <div class="field__row">
+      <input
+        id="checkout-coupon"
+        type="text"
+        autocomplete="off"
+        placeholder="WELCOME2026"
+        [formField]="couponForm.code"
+      />
+      <button type="submit" class="btn" [disabled]="couponForm.code().invalid()">Aplicar</button>
+    </div>
+  </div>
+
+  @if (couponForm.code().touched() && couponForm.code().invalid()) {
+    <ul class="errors" aria-live="polite">
+      @for (error of couponForm.code().errors(); track error) {
+        <li>{{ error.message }}</li>
+      }
+    </ul>
+  }
+
+  @if (couponError(); as message) {
+    <p class="coupon__error" role="alert">{{ message }}</p>
+  } @else if (appliedCoupon(); as code) {
+    <p class="coupon__applied" role="status">Cupón aplicado: <strong>{{ code }}</strong></p>
+  }
+</form>

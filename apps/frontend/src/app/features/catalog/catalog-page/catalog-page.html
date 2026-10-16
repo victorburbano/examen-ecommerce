@@ -27,5 +27,8 @@
     }
   </div>
 
-  <app-cart-panel />
+  <div class="page__side">
+    <app-cart-panel />
+    <app-checkout-panel (ordered)="products.reload()" (stockConflict)="products.reload()" />
+  </div>
 </section>

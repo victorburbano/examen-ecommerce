@@ -91,6 +91,21 @@ describe('CatalogPage', () => {
     addButtons[1].click();
     await fixture.whenStable();
 
+    // Añadir al carrito dispara la re-cotización del checkout (spec 005).
+    for (const request of httpMock.match('/api/checkout/quote')) {
+      request.flush({
+        items: [],
+        discounts: [],
+        originalSubtotal: '129.79',
+        totalDiscount: '0.00',
+        effectiveDiscountPercent: '0.00',
+        total: '129.79',
+        capApplied: false,
+        couponCode: null,
+      });
+    }
+    await fixture.whenStable();
+
     expect(store.quantityOf(1)).toBe(2);
     expect(store.quantityOf(6)).toBe(1);
     // 59.90 x 2 + 9.99 = 129.79

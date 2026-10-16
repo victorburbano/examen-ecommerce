@@ -1,0 +1,67 @@
+.coupon {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.field label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #475569;
+}
+
+.field__row {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.field__row input {
+  flex: 1;
+  min-width: 0;
+  padding: 0.5rem 0.6rem;
+  border: 1px solid #c3cad4;
+  border-radius: 8px;
+  font: inherit;
+}
+
+.btn {
+  padding: 0.5rem 0.9rem;
+  border: 1px solid #2563eb;
+  border-radius: 8px;
+  background: #2563eb;
+  color: #fff;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn:disabled {
+  border-color: #cbd5e1;
+  background: #cbd5e1;
+  cursor: not-allowed;
+}
+
+.errors {
+  margin: 0;
+  padding-left: 1.1rem;
+  color: #b42318;
+  font-size: 0.8rem;
+}
+
+.coupon__error {
+  margin: 0;
+  color: #b42318;
+  font-size: 0.85rem;
+}
+
+.coupon__applied {
+  margin: 0;
+  color: #15803d;
+  font-size: 0.85rem;
+}

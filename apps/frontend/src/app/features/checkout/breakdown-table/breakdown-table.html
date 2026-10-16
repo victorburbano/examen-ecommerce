@@ -1,0 +1,56 @@
+<table class="breakdown">
+  <caption class="visually-hidden">Desglose de la compra</caption>
+
+  <thead>
+    <tr>
+      <th scope="col">Producto</th>
+      <th scope="col" class="num">Cant.</th>
+      <th scope="col" class="num">Importe</th>
+    </tr>
+  </thead>
+
+  <tbody>
+    @for (item of itemRows(); track item.productId) {
+      <tr>
+        <td>
+          {{ item.name }}
+          <span class="cat">{{ item.categoryName }}</span>
+        </td>
+        <td class="num">{{ item.quantity }}</td>
+        <td class="num">{{ item.lineTotal | currency: 'USD' }}</td>
+      </tr>
+    }
+  </tbody>
+
+  <tfoot>
+    <tr>
+      <th scope="row" colspan="2">Subtotal</th>
+      <td class="num">{{ breakdown().originalSubtotal | currency: 'USD' }}</td>
+    </tr>
+
+    @for (line of breakdown().discounts; track line.type) {
+      <tr class="discount" [class.discount--cap]="line.type === 'CAP_ADJUSTMENT'">
+        <th scope="row" colspan="2">
+          {{ line.label }}
+          @if (line.percent !== null) {
+            <span class="pct">({{ line.percent }} %)</span>
+          }
+        </th>
+        <td class="num">{{ line.amount | currency: 'USD' }}</td>
+      </tr>
+    }
+
+    <tr class="saving">
+      <th scope="row" colspan="2">
+        Ahorro total
+        <span class="pct">({{ breakdown().effectiveDiscountPercent }} %)</span>
+      </th>
+      <td class="num">−{{ breakdown().totalDiscount | currency: 'USD' }}</td>
+    </tr>
+
+    <tr class="total">
+      <th scope="row" colspan="2">Total a pagar</th>
+      <td class="num">{{ breakdown().total | currency: 'USD' }}</td>
+    </tr>
+  </tfoot>
+</table>

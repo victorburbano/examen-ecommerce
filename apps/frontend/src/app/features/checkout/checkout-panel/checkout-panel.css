@@ -1,0 +1,55 @@
+:host {
+  display: block;
+}
+
+.checkout {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  padding: 1.25rem;
+  border: 1px solid #e2e6ec;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.checkout__title {
+  margin: 0;
+  font-size: 1.15rem;
+}
+
+.state {
+  margin: 0;
+  padding: 0.6rem 0.8rem;
+  border: 1px dashed #cbd5e1;
+  border-radius: 10px;
+  color: #475569;
+  font-size: 0.9rem;
+}
+
+.state--error {
+  border-style: solid;
+  border-color: #fecaca;
+  background: #fef2f2;
+  color: #b42318;
+}
+
+.checkout__buy {
+  padding: 0.65rem 1rem;
+  border: 0;
+  border-radius: 10px;
+  background: #15803d;
+  color: #fff;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.checkout__buy:disabled {
+  background: #cbd5e1;
+  cursor: not-allowed;
+}
+
+.checkout__buy:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+}

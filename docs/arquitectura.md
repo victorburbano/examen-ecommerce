@@ -39,6 +39,7 @@ El motor vive en `checkout/domain/discount` y **no importa Spring, JPA ni HTTP**
 - **Tope**: `DiscountCapPolicy` es la única clase que conoce el 35 %; si el acumulado lo supera, añade un paso `CAP_ADJUSTMENT` con el exceso en **negativo**, de modo que la suma de pasos cuadra con `totalDiscount`.
 - **Config tipada**: `DiscountProperties` (dominio) se enlaza desde `app.discounts.*` mediante `DiscountSettings` + `DiscountConfig` en infraestructura, así el dominio no depende de Spring (DEC-020).
 - **Transacción de compra**: `CheckoutService` (sin `@Transactional`) orquesta un reintento acotado; cada intento es una transacción nueva en `CheckoutTransaction.place(...)`, que recalcula, descuenta el stock de todas las líneas (con `saveAndFlush` para detectar el conflicto de `@Version` dentro de la transacción) y persiste la orden con su desglose (DEC-023/DEC-025). `quote` y `orders` comparten `CheckoutCalculation`, así que la cotización y la compra nunca divergen (DEC-006).
+- **Estado del checkout (front)**: `CheckoutStore` (signals) re-cotiza con un `effect` sobre el carrito y **descarta por secuencia** las respuestas que llegan tarde (DEC-027); el cupón solo se confirma si el backend lo acepta y el 409 se distingue con un flag para refrescar el catálogo (DEC-028). Los componentes de desglose/banner son "tontos" (solo pintan `inputs`): no hay lógica de negocio en la vista.
 
 ## 4. Patrones (≥ 2 implementados en código)
 | Patrón | Dónde | Por qué |
@@ -48,6 +49,7 @@ El motor vive en `checkout/domain/discount` y **no importa Spring, JPA ni HTTP**
 | **Factory** | `DiscountPipelineFactory` | Arma el pipeline por request; el cupón solo entra si existe |
 | **Port / Adapter** | `*Repository` en domain, JPA en infrastructure | Dominio independiente de la BD (DIP) |
 | **Observer** | `CartStore` con signals (front) | Vistas reactivas sin suscripciones manuales |
+| **Store + secuencia (front)** | `CheckoutStore` (`effect` + contador de secuencia) | Descarta respuestas obsoletas de un POST no idempotente (DEC-027) |
 
 ## 5. Trade-offs (completar en spec 006)
 - Backend como única fuente de cálculo (DEC-006): sin duplicar lógica, a costa de una llamada por cotización.

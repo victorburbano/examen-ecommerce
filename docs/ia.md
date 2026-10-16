@@ -2,7 +2,7 @@
 
 > **Esqueleto (spec 000).** Se llena con hechos reales al cerrar cada spec (skill `ia-log`). Las secciones marcadas *pendiente* no contienen entradas inventadas a propósito.
 
-Asistentes usados: Claude Code (Anthropic) para el scaffold (spec 000) y OpenCode para la implementación (specs 001 y 002). Método: Spec-Driven Development, un commit por spec.
+Asistentes usados: Claude Code (Anthropic) para el scaffold (spec 000) y OpenCode para la implementación (specs 001 a 005). Método: Spec-Driven Development, un commit por spec.
 
 ## 1. Skills / prompts automatizados
 | Skill | Qué automatiza | Dónde |
@@ -35,6 +35,7 @@ No disponibles fuera de Claude Code: en la spec 001 se hizo la revisión equival
 | 3 | 2026-10-15 | 002 | Catálogo público + carrito reactivo (HU 1) | Plan corto aprobado; el humano pidió **recomendación con razones** sobre 3 dudas de diseño (formato del precio, categoría en el wire, dinero en el front) antes de codificar | 104 tests backend (LINE 99.5 %, BRANCH 98.1 %) y 90 frontend (100 %); `mvnw verify`, lint y build verdes | Se aprobaron las 3 recomendaciones (DEC-017..019); la suite destapó un test flaky heredado y dos fallos en las specs nuevas (correcciones 4 y 5) |
 | 4 | 2026-10-15 | 003 | Motor de descuentos acumulativos con tope del 35 % (HU 2 y 4) | Plan corto aprobado; el humano pidió **recomendación con razones** sobre el conflicto entre `plan.md` (`category-name: Tecnología`) y DEC-018, y aprobó `app.discounts.category: TECHNOLOGY` + el puente de infraestructura | 195 tests backend (LINE 99.6 %, BRANCH 99.1 %; paquete `domain/discount` al **100 %** de líneas y ramas); `mvnw verify` verde | Se aprobó DEC-020; la tabla parametrizada destapó un error de cálculo a mano y un test mal planteado (correcciones 6 y 7) |
 | 5 | 2026-10-15 | 004 | Checkout: `quote` público, `orders` autenticado, cupones en BD, stock con `@Version` y reintento (HU 3) | Plan corto aprobado con 3 recomendaciones de diseño (unidad `@Transactional` + reintento fuera de ella, `PageResult` de dominio, desglose completo con carga en lote) | 290 tests backend (LINE **99.8 %**, BRANCH **99.4 %**); `mvnw verify` verde | Se aprobaron las 3 recomendaciones (DEC-023..025); la propia suite destapó dos fallos en tests nuevos (correcciones 8 y 9) y se remató el flaky heredado (corrección 10) |
+| 6 | 2026-10-15 | 005 | Checkout en el front: cupón, desglose, banner del tope, compra y órdenes (HU 2 y HU 4) | Plan corto aprobado; se cambió `resource` por un **store explícito con guarda de secuencia** (DEC-027) en vez del `resource`/`httpResource` que sugería `plan.md`, y se pidió recomendación de diseño sobre cómo distinguir el 409 | 145 tests frontend, **100 %** (stmts/branch/funcs/lines); `npm run lint` y `build` verdes; backend intacto (`mvnw verify` 290 tests, LINE 99.8 %/BRANCH 99.4 %) | Se aprobaron DEC-027..029; `lint` y la propia suite destaparon 5 fallos reales (correcciones 11–15) antes de cerrar |
 
 ### Porcentaje de código asistido
 Método reproducible (`ia-log`): todos los commits llevan el trailer `Co-Authored-By`, así que se mide el diff del commit de cada spec con `git show --shortstat <commit>` y `git show --numstat <commit>`.
@@ -50,6 +51,9 @@ Spec 003 — líneas de **código** del diff: producción **543** (Java main: do
 
 Spec 004 — líneas de **código** del diff: producción **1569** (Java main 1512 + migraciones SQL `V5`/`V6` 57) · tests **2105** (Java) · docs/specs **89** (incluye `decisiones.md`, `security.md`, `ia.md` y `MEMORY.md`). 77 archivos.
 **Código asistido por IA: 100 % de las líneas de código del diff**. El humano fijó los criterios de aceptación del `spec.md` (endpoints, códigos de error, seed de cupones, criterios de concurrencia/rollback) y aprobó tres recomendaciones de diseño (DEC-023 unidad transaccional + reintento, DEC-024 `PageResult` de dominio, DEC-025 desglose completo sin N+1) antes de codificar; los importes esperados de las cotizaciones (con y sin tope) se calcularon **a mano** y se verificaron contra el motor real en los tests de integración.
+
+Spec 005 — líneas de **código** del diff: producción **1223** (TS de store/servicios/componentes 544 · plantillas 225 · CSS 454) · tests **1286** (specs Jest) · docs/specs aparte (`decisiones.md`, `security.md`, `ia.md`, `MEMORY.md`, `specs/005`). 42 archivos.
+**Código asistido por IA: 100 % de las líneas de código del diff**. El humano fijó los criterios del `spec.md` (texto exacto del banner, estados visibles, casos de borde: cupón aplicado al cambiar el carrito, doble clic, respuesta obsoleta) y aprobó el cambio de diseño frente al `plan.md`: **store explícito con guarda de secuencia** en vez de `resource`/`httpResource` (DEC-027), y el modo de distinguir el 409 (DEC-028). La verificación manual con el backend en marcha (`WELCOME2026` → 3 líneas sin tope; `MEGA40` → 35.00 % con `capApplied`) se contrastó contra el motor real, no contra valores escritos a mano.
 
 ### Correcciones a sugerencias de la IA (mínimo 2, reales)
 #### 1. El refresh revocaba la familia pero el rollback del 401 deshacía la revocación
@@ -111,3 +115,33 @@ Spec 004 — líneas de **código** del diff: producción **1569** (Java main 15
 - **Problema técnico**: idéntico al de la corrección 4: cambiar el último carácter base64url de la firma no siempre la invalida (32 bytes → 43 chars, el último con 2 bits útiles), así que el token "manipulado" a veces seguía siendo válido.
 - **Corrección aplicada**: manipular el **payload** (primer carácter del segundo segmento) también en `JwtIssuerTest`.
 - **Evidencia**: `apps/backend/src/test/java/com/ecommerce/auth/infrastructure/JwtIssuerTest.java`; `./mvnw verify` en verde y estable.
+
+#### 11. `output<void>()` prohibido por el linter (`no-invalid-void-type`)
+- **Sugerencia original** (spec 005): declarar las salidas del panel como `readonly ordered = output<void>();` para tiparlas explícitamente.
+- **Problema técnico**: igual que la corrección 3 pero en `output`: `@typescript-eslint/no-invalid-void-type` (config `strict`) rechaza `void` como argumento de tipo en una **llamada** (`output<void>()`). `npm run lint` falló con 3 errores en `checkout-panel.ts` y `order-confirmation.ts`.
+- **Corrección aplicada**: `output()` sin genérico (por defecto `void`), con `emit()` sin argumentos.
+- **Evidencia**: `apps/frontend/src/app/features/checkout/checkout-panel/checkout-panel.ts:30`, `.../order-confirmation/order-confirmation.ts:16`; `npm run lint` en verde.
+
+#### 12. El test de compra ponía la sesión en un store obsoleto (orden de inicialización)
+- **Sugerencia original** (spec 005): en `checkout-panel.spec.ts`, `auth.setAccessToken('jwt')` **antes** de `createWithQuote()`.
+- **Problema técnico**: la variable `auth` se reasigna **dentro** de `create()`/`createWithQuote()`, que corre después; el token se ponía en el `AuthStore` de un test anterior, así que el panel veía `isAuthenticated() === false`, redirigía a `/login` y el test fallaba con `Expected one matching request for criteria "Match URL: /api/checkout/orders", found none` (el fallo se detapó al correr la suite completa).
+- **Corrección aplicada**: crear el fixture primero y poner el token después (el `AuthStore` es `providedIn: 'root'`, la misma instancia que inyecta el componente).
+- **Evidencia**: `apps/frontend/src/app/features/checkout/checkout-panel/checkout-panel.spec.ts`; `npm run test:coverage` en verde (145 tests).
+
+#### 13. `create()` invocado dos veces en el mismo test (`TestBed` ya instanciado)
+- **Sugerencia original** (spec 005): reutilizar el mismo helper `create()` dos veces dentro de un `it` para comparar dos estados (banner visible/oculto y tope sí/no).
+- **Problema técnico**: `TestBed.configureTestingModule` no se puede volver a llamar una vez instanciado el módulo; los tests fallaban con "Cannot configure the test module when the test module has already been instantiated".
+- **Corrección aplicada**: un `it` por caso (o `TestBed.resetTestingModule()` antes del segundo `create()`).
+- **Evidencia**: `apps/frontend/src/app/features/checkout/cap-alert/cap-alert.spec.ts` y `.../order-confirmation/order-confirmation.spec.ts`; suite en verde.
+
+#### 14. `ReadonlyArray<T>` prohibido por la regla `array-type`
+- **Sugerencia original** (spec 005): `const cases: ReadonlyArray<readonly [string, string]> = [...]` en el test del mapper de errores.
+- **Problema técnico**: `@typescript-eslint/array-type` (config `strict`) exige la forma `readonly T[]` para los arrays de solo lectura. `npm run lint` falló.
+- **Corrección aplicada**: `readonly (readonly [string, string])[]`.
+- **Evidencia**: `apps/frontend/src/app/features/checkout/checkout-error.spec.ts`; `npm run lint` en verde.
+
+#### 15. Rutas de import mal resueltas al crear `OrdersPage`
+- **Sugerencia original** (spec 005): en `orders-page/orders-page.ts`, `import { Order } from '../checkout/checkout.models'` y `import { OrdersApiService } from './orders-api.service'`.
+- **Problema técnico**: el componente está en `features/orders/orders-page/`, así que `../checkout/...` apuntaba a `features/orders/checkout/...` y `./orders-api.service` al archivo dentro de `orders-page/`; el servicio está en `features/orders/`. `ng build` falló con `TS2307: Cannot find module`.
+- **Corrección aplicada**: `../../checkout/checkout.models` y `../orders-api.service` (verificar la profundidad real del árbol, no de memoria).
+- **Evidencia**: `apps/frontend/src/app/features/orders/orders-page/orders-page.ts`; `npm run build` en verde.

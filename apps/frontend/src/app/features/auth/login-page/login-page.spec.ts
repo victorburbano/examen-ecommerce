@@ -1,7 +1,7 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
-import { Router, provideRouter } from '@angular/router';
+import { ActivatedRoute, Router, convertToParamMap, provideRouter } from '@angular/router';
 import { AuthStore } from '../../../core/auth/auth.store';
 import { LoginPage } from './login-page';
 
@@ -52,7 +52,7 @@ describe('LoginPage', () => {
   it('submits the credentials and navigates to the home on success', async () => {
     const fixture = await createPage();
     const router = TestBed.inject(Router);
-    const navigate = jest.spyOn(router, 'navigate').mockResolvedValue(true);
+    const navigate = jest.spyOn(router, 'navigateByUrl').mockResolvedValue(true);
 
     typeInto(fixture.nativeElement.querySelector('#login-email') as HTMLInputElement, 'user@example.com');
     typeInto(fixture.nativeElement.querySelector('#login-password') as HTMLInputElement, 'User123!');
@@ -69,12 +69,76 @@ describe('LoginPage', () => {
     await fixture.whenStable();
 
     expect(TestBed.inject(AuthStore).isAuthenticated()).toBe(true);
-    expect(navigate).toHaveBeenCalledWith(['/']);
+    expect(navigate).toHaveBeenCalledWith('/');
+  });
+
+  it('returns to the requested URL after login', async () => {
+    TestBed.configureTestingModule({
+      imports: [LoginPage],
+      providers: [
+        provideRouter([]),
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        {
+          provide: ActivatedRoute,
+          useValue: { snapshot: { queryParamMap: convertToParamMap({ returnUrl: '/orders' }) } },
+        },
+      ],
+    });
+    const fixture = TestBed.createComponent(LoginPage);
+    await fixture.whenStable();
+    httpMock = TestBed.inject(HttpTestingController);
+    const navigate = jest.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
+
+    typeInto(fixture.nativeElement.querySelector('#login-email') as HTMLInputElement, 'user@example.com');
+    typeInto(fixture.nativeElement.querySelector('#login-password') as HTMLInputElement, 'User123!');
+    await fixture.whenStable();
+
+    (fixture.nativeElement.querySelector('form') as HTMLFormElement).dispatchEvent(new Event('submit'));
+    await fixture.whenStable();
+
+    httpMock.expectOne('/api/auth/login').flush(TOKENS);
+    httpMock.expectOne('/api/auth/me').flush(USER);
+    await fixture.whenStable();
+
+    expect(navigate).toHaveBeenCalledWith('/orders');
+  });
+
+  it('ignores an external return URL', async () => {
+    TestBed.configureTestingModule({
+      imports: [LoginPage],
+      providers: [
+        provideRouter([]),
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        {
+          provide: ActivatedRoute,
+          useValue: { snapshot: { queryParamMap: convertToParamMap({ returnUrl: '//evil.example' }) } },
+        },
+      ],
+    });
+    const fixture = TestBed.createComponent(LoginPage);
+    await fixture.whenStable();
+    httpMock = TestBed.inject(HttpTestingController);
+    const navigate = jest.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
+
+    typeInto(fixture.nativeElement.querySelector('#login-email') as HTMLInputElement, 'user@example.com');
+    typeInto(fixture.nativeElement.querySelector('#login-password') as HTMLInputElement, 'User123!');
+    await fixture.whenStable();
+
+    (fixture.nativeElement.querySelector('form') as HTMLFormElement).dispatchEvent(new Event('submit'));
+    await fixture.whenStable();
+
+    httpMock.expectOne('/api/auth/login').flush(TOKENS);
+    httpMock.expectOne('/api/auth/me').flush(USER);
+    await fixture.whenStable();
+
+    expect(navigate).toHaveBeenCalledWith('/');
   });
 
   it('shows the API error when the credentials are rejected', async () => {
     const fixture = await createPage();
-    const navigate = jest.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+    const navigate = jest.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
 
     typeInto(fixture.nativeElement.querySelector('#login-email') as HTMLInputElement, 'user@example.com');
     typeInto(fixture.nativeElement.querySelector('#login-password') as HTMLInputElement, 'WrongPassword!');

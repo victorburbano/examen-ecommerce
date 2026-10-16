@@ -1,0 +1,32 @@
+<section class="confirmation" role="status" aria-live="polite" aria-labelledby="confirmation-title">
+  <h2 id="confirmation-title" class="confirmation__title">¡Compra confirmada!</h2>
+
+  <p class="confirmation__id">
+    Orden <code>{{ order().orderId }}</code>
+  </p>
+  <p class="confirmation__date">Fecha: {{ order().createdAt | date: 'short' }}</p>
+
+  <dl class="confirmation__totals">
+    <div>
+      <dt>Subtotal</dt>
+      <dd>{{ order().originalSubtotal | currency: 'USD' }}</dd>
+    </div>
+    <div>
+      <dt>Ahorro ({{ order().effectiveDiscountPercent }} %)</dt>
+      <dd class="saving">−{{ order().totalDiscount | currency: 'USD' }}</dd>
+    </div>
+    <div>
+      <dt>Total pagado</dt>
+      <dd class="total">{{ order().total | currency: 'USD' }}</dd>
+    </div>
+  </dl>
+
+  @if (order().capApplied) {
+    <p class="confirmation__cap">Se aplicó el tope máximo de ahorro (35%).</p>
+  }
+
+  <div class="confirmation__actions">
+    <a class="btn btn--primary" routerLink="/orders">Ver mis órdenes</a>
+    <button type="button" class="btn" (click)="dismiss.emit()">Seguir comprando</button>
+  </div>
+</section>

@@ -1,0 +1,87 @@
+.breakdown {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.breakdown caption {
+  text-align: left;
+}
+
+.breakdown th,
+.breakdown td {
+  padding: 0.35rem 0.25rem;
+  text-align: left;
+  vertical-align: top;
+}
+
+.breakdown thead th {
+  border-bottom: 1px solid #e2e6ec;
+  color: #475569;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.breakdown .num {
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.breakdown tfoot th,
+.breakdown tfoot td {
+  border-top: 1px solid #eef2f7;
+  padding-top: 0.5rem;
+}
+
+.breakdown tfoot th {
+  font-weight: 500;
+}
+
+.cat {
+  display: block;
+  color: #64748b;
+  font-size: 0.75rem;
+}
+
+.pct {
+  color: #64748b;
+  font-weight: 400;
+}
+
+.discount td {
+  color: #15803d;
+}
+
+.discount--cap td {
+  color: #b45309;
+}
+
+.saving th {
+  color: #15803d;
+}
+
+.saving td {
+  color: #15803d;
+  font-weight: 600;
+}
+
+.total th,
+.total td {
+  border-top: 2px solid #cbd5e1;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}

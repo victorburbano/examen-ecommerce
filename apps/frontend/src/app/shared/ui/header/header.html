@@ -3,6 +3,7 @@
 
   <nav class="session" aria-label="Sesión">
     @if (store.isAuthenticated()) {
+      <a routerLink="/orders">Mis órdenes</a>
       <span class="email">{{ store.email() }}</span>
       <button type="button" class="logout" (click)="onLogout()">Salir</button>
     } @else {

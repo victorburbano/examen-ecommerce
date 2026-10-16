@@ -154,3 +154,24 @@ Formato: `DEC-NNN` · fecha · estado · contexto · decisión · alternativas �
 - **Contexto**: el enunciado pide aceptar el código "en minúsculas con espacios" y probar el último día de vigencia y el siguiente; además hay dos formas de "no poder comprar por stock".
 - **Decisión**: `CouponCode.normalize` pasa el código a mayúsculas y sin espacios (vacío = sin cupón); `Coupon.isUsableOn` es inclusivo en `valid_from` y `valid_to` con un `Clock` inyectado (nunca `LocalDate.now()` en el dominio). El producto duplicado en el carrito o la cantidad ≤ 0 son 400 `INVALID_CART`/`VALIDATION_ERROR`; un cupón inexistente/vencido es 422; el stock insuficiente y el conflicto tras agotar reintentos comparten 409 `INSUFFICIENT_STOCK` (para el cliente el resultado es el mismo).
 - **Consecuencias**: el contrato de errores es estable (`ProblemDetail` + `code`); la vigencia se prueba con fechas límite y un reloj fijo, sin depender del día real.
+
+## DEC-027 — Checkout del front con store explícito y descarte de respuestas obsoletas
+- **Fecha / estado**: 2026-10-15 · aceptada.
+- **Contexto**: el `plan.md` proponía `resource`/`httpResource` con el carrito + cupón como parámetros. Pero el cupón solo se "confirma" si el backend lo acepta (hay que revertir el texto si falla y **conservar el desglose previo**) y hay que descartar cotizaciones que llegan tarde (POST, no GET idempotente).
+- **Decisión**: `CheckoutStore` con signals y un `effect` sobre el carrito. Un **contador de secuencia** descarta cualquier respuesta cuyo id no sea el último emitido. El cupón se lee `untracked` para que confirmarlo no dispare una segunda cotización; el código candidato solo se **commitea** (`appliedCoupon`) cuando la respuesta es de éxito con ese cupón. Carrito vacío ⇒ `idle` sin petición.
+- **Alternativas**: `resource` (cómodo para GET reactivo, incómodo para un POST con commit condicional del cupón y para descartar obsoletas: el cupón como parámetro re-lanzaría la petición al teclear).
+- **Consecuencias**: el panel no replica cálculo (DEC-006); el flujo es testeable con `TestBed.tick()`; el desglose previo se conserva ante un cupón rechazado.
+
+## DEC-028 — El 409 de stock se distingue con un flag para refrescar el catálogo
+- **Fecha / estado**: 2026-10-15 · aceptada.
+- **Contexto**: el criterio pide "mensaje + refresco del catálogo" solo ante **stock insuficiente** (409), no ante cualquier fallo de compra (p. ej. 401 o error de red), donde recargar no aporta nada.
+- **Decisión**: `CheckoutStore` expone `stockConflict` (true solo si `ProblemDetail.code === 'INSUFFICIENT_STOCK'`; se resetea al iniciar cada compra). `CheckoutPanel` emite `ordered` (éxito: vacía el carrito) y `stockConflict` (409); `CatalogPage` conecta ambos a `products.reload()`.
+- **Alternativas**: refrescar siempre ante cualquier error (recarga inútil y confusa); que la vista inspeccione el error crudo (acopla el componente al formato de `ProblemDetail`).
+- **Consecuencias**: el refresco de stock ocurre solo cuando tiene sentido; el mapeo de errores queda en un único punto (`checkout-error.ts`).
+
+## DEC-029 — `returnUrl` saneado tras el login
+- **Fecha / estado**: 2026-10-15 · aceptada.
+- **Contexto**: el checkout manda a `/login?returnUrl=/` para volver al carrito; pero honrar un `returnUrl` arbitrario abriría un **open redirect**.
+- **Decisión**: `LoginPage` solo acepta un `returnUrl` que empiece por `/` y **no** por `//`; en cualquier otro caso navega a `/`. El acceso token sigue viviendo solo en memoria, así que el carrito (en memoria) se conserva al volver.
+- **Alternativas**: confiar el destino a `window.history.back()` (pierde el destino si se entró directo); aceptar la URL tal cual (riesgo de redirección externa).
+- **Consecuencias**: se conserva el flujo "login → volver al checkout" sin habilitar redirecciones externas; hay test del `returnUrl` externo rechazado.

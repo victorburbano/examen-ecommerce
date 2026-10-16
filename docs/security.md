@@ -47,3 +47,19 @@ Comprobaciones del prompt `docs/prompts/security-review.md` sobre el checkout (h
 | Secretos / CORS | ✅ Sin cambios: sin secretos en el repo; CORS sigue acotado a `app.security.allowed-origin` |
 
 Revisión equivalente a `code-auditor` y `coverage-guard` (no disponibles fuera de Claude Code): diff revisado a mano contra SOLID (Strategy/Pipeline/Factory ya de la spec 003, Port/Adapter en el checkout, cero lógica en controllers), tipado estricto (sin `any` en Java, records para DTOs), dinero siempre `BigDecimal`/strings y umbrales de cobertura verificados (`./mvnw verify` en verde, LINE 99.8 % / BRANCH 99.4 %).
+
+## Revisión de la spec 005 (2026-10-15)
+
+Comprobaciones del prompt `docs/prompts/security-review.md` sobre el checkout del frontend (hallazgo y estado):
+
+| Comprobación | Resultado |
+|---|---|
+| Dinero calculado solo en el servidor | ✅ El front **no replica** el motor: todos los importes del desglose vienen de `quote`/`orders` como `string` decimal y se formatean con `CurrencyPipe`. La única aritmética local es el subtotal informativo del carrito (céntimos enteros), que el servidor ignora |
+| Autorización de la compra | ✅ `POST /api/checkout/orders` exige sesión: si no hay, el panel navega a `/login?returnUrl=/` **antes** de emitir la petición; un 401 en vuelo (refresh fallido) redirige también a login |
+| `returnUrl` (open redirect) | ✅ `LoginPage` solo acepta un destino interno (`startsWith('/') && !startsWith('//')`); cualquier otro cae a `/`. Test dedicado con `//evil.example` |
+| Alcance de las órdenes | ✅ `GET /api/orders` decide el alcance por rol en el **backend**; el front solo cambia el título ("Mis órdenes"/"Todas las órdenes") y nunca filtra datos en cliente |
+| Token fuera de storage | ✅ Sin cambios: el access token sigue solo en memoria (`signal`); el refresh en cookie `HttpOnly`. La navegación a `/login` no persiste credenciales |
+| Errores sin filtrar el cuerpo crudo | ✅ Mapper único `ProblemDetail.code` → mensaje en español (`checkout-error.ts`); el `detail` solo se usa como último recurso. Nada de tokens ni del carrito en logs del front |
+| Secretos / CORS | ✅ Sin cambios: sin secretos nuevos; el front usa rutas relativas (`/api/**`) bajo el mismo origen, sin ampliar CORS |
+
+Revisión equivalente a `code-auditor` y `coverage-guard` (no disponibles fuera de Claude Code): diff revisado a mano contra SOLID (store como única fuente de estado, componentes "tontos" que solo pintan `inputs`, cero lógica de negocio en el panel), tipado estricto (sin `any`; `input.required`/`output()`; modelos `readonly`), accesibilidad (`role="status"`/`aria-live` en el banner, `role="alert"` en el error de cupón, foco visible) y umbral de cobertura verificado (`npm run test:coverage` en verde, **100 %** en los 4 ejes; 145 tests).

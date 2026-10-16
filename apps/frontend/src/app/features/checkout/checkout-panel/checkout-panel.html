@@ -1,0 +1,30 @@
+@if (store.lastOrder(); as order) {
+  <app-order-confirmation [order]="order" (dismiss)="store.dismissOrder()" />
+} @else if (!cart.isEmpty()) {
+  <section class="checkout" aria-labelledby="checkout-title">
+    <h2 id="checkout-title" class="checkout__title">Checkout</h2>
+
+    <app-cap-alert [visible]="store.capApplied()" />
+
+    <app-coupon-form />
+
+    @if (store.isQuoting() && !store.hasQuote()) {
+      <p class="state" role="status">Calculando el desglose…</p>
+    } @else if (store.hasQuote()) {
+      <app-breakdown-table [breakdown]="store.quote()!" />
+    }
+
+    @if (store.error(); as message) {
+      <p class="state state--error" role="alert">{{ message }}</p>
+    }
+
+    <button
+      type="button"
+      class="checkout__buy"
+      [disabled]="store.placing() || !store.hasQuote()"
+      (click)="onBuy()"
+    >
+      {{ store.placing() ? 'Procesando…' : 'Comprar' }}
+    </button>
+  </section>
+}
